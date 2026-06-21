@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#3C3489">
+<meta name="description" content="Consultazione orari treni">
+<link rel="manifest" href="./manifest-treni.json">
+<link rel="apple-touch-icon" href="./icon-treni.svg">
+<title>Orari Treni</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#F4F3FB; --surface:#fff; --surface2:#F8F7FF;
+  --border:#E2DFFA; --border2:#CBC6F0;
+  --purple:#534AB7; --purple-dk:#3C3489; --purple-lt:#EEEDFE;
+  --text:#1A1735; --text2:#6B6891; --text3:#A09DC0;
+  --red:#D84040;
+  --top-h:56px;
+  --safe-b:env(safe-area-inset-bottom, 0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column}
+
+/* ── TOPBAR ── */
+.topbar{height:var(--top-h);background:var(--purple-dk);display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex-shrink:0;position:relative;z-index:50}
+.topbar-logo{font-size:18px;font-weight:800;color:white;letter-spacing:-.5px}
+.topbar-logo span{color:#AFA9EC}
+.topbar-actions{display:flex;align-items:center;gap:6px}
+.icon-btn{width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;background:rgba(255,255,255,.12);color:white;transition:background .15s}
+.icon-btn:active{background:rgba(255,255,255,.25)}
+
+/* ── SCROLL CONTAINER ── */
+.scroll-area{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--safe-b) + 16px)}
+
+/* ── SELECTOR PANEL ── */
+.selector-panel{padding:14px 16px 6px}
+.selector-row{margin-bottom:10px}
+.selector-label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.pill-group{display:flex;gap:8px;flex-wrap:wrap}
+.pill-btn{flex:1;min-width:80px;padding:10px 12px;border-radius:12px;font-size:13px;font-weight:700;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;text-align:center;transition:all .15s}
+.pill-btn:active{transform:scale(.97)}
+.pill-btn.active{background:var(--purple);color:white;border-color:var(--purple)}
+.pill-btn .pill-sub{display:block;font-size:10px;font-weight:500;opacity:.85;margin-top:1px}
+
+/* ── SOURCE TOGGLE ── */
+.source-toggle{display:flex;gap:6px;padding:0 16px 10px}
+.source-btn{flex:1;padding:8px;border-radius:10px;font-size:12px;font-weight:600;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;text-align:center}
+.source-btn.active{background:var(--purple-lt);color:var(--purple);border-color:var(--purple)}
+
+/* ── UPLOAD CARD ── */
+.upload-card{margin:12px 16px;background:var(--surface);border:2px dashed var(--border2);border-radius:18px;padding:32px 20px;text-align:center;cursor:pointer;transition:all .15s}
+.upload-card:active{background:var(--purple-lt);border-color:var(--purple)}
+.upload-card-icon{font-size:44px;margin-bottom:10px}
+.upload-card-title{font-size:16px;font-weight:700;color:var(--text);margin-bottom:4px}
+.upload-card-sub{font-size:13px;color:var(--text2);line-height:1.4}
+
+/* ── FILE CHIP ── */
+.file-chip{margin:8px 16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text2)}
+.file-chip strong{color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-chip-del{background:none;border:none;font-size:18px;color:var(--text3);cursor:pointer;padding:2px 4px;flex-shrink:0}
+
+/* ── STATS STRIP ── */
+.stats-strip{display:flex;gap:10px;padding:8px 16px;overflow-x:auto;scrollbar-width:none}
+.stats-strip::-webkit-scrollbar{display:none}
+.stat-pill{flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:10px 16px;text-align:center;min-width:90px}
+.stat-pill-val{font-size:22px;font-weight:800;color:var(--purple-dk)}
+.stat-pill-lbl{font-size:10px;color:var(--text2);margin-top:2px;white-space:nowrap}
+
+/* ── EMPTY STATE ── */
+.empty-state{padding:48px 24px;text-align:center}
+.empty-icon{font-size:48px;margin-bottom:12px}
+.empty-title{font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px}
+
+/* ── LOCALITY SCROLL ── */
+.loc-scroll{display:flex;gap:8px;padding:8px 16px;overflow-x:auto;scrollbar-width:none}
+.loc-scroll::-webkit-scrollbar{display:none}
+.loc-chip{flex-shrink:0;padding:7px 14px;border-radius:20px;font-size:13px;font-weight:600;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer}
+.loc-chip.active{background:var(--purple);color:white;border-color:var(--purple)}
+
+/* ── SEARCH BAR ── */
+.search-bar{margin:8px 16px;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px}
+.search-bar input{flex:1;border:none;outline:none;font-size:14px;background:none;color:var(--text)}
+.search-bar span{font-size:18px;color:var(--text3)}
+.train-match{font-size:11px;color:var(--text2);padding:2px 16px 6px}
+
+/* ── TRAIN CARDS ── */
+.train-card{background:var(--surface);border-radius:16px;border:1px solid var(--border);margin:0 16px 10px;overflow:hidden;transition:box-shadow .15s}
+.train-card.expanded{box-shadow:0 4px 20px rgba(83,74,183,.12);border-color:var(--purple)}
+.train-card-header{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;-webkit-user-select:none;user-select:none}
+.train-card-header:active{background:var(--surface2)}
+.train-num{font-size:16px;font-weight:700;color:var(--text)}
+.train-arrow{font-size:14px;color:var(--text3);transition:transform .2s}
+.train-card.expanded .train-arrow{transform:rotate(90deg);color:var(--purple)}
+.train-detail{display:none;border-top:1px solid var(--border);padding:14px 16px}
+.train-card.expanded .train-detail{display:block}
+.train-detail-title{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.time-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(80px,1fr));gap:6px}
+.time-cols{display:flex;gap:14px}
+.time-col{flex:1;min-width:0}
+.time-col-lbl{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;text-align:center}
+.time-item{background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center}
+.time-item-lbl{font-size:10px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:3px}
+.time-item-val{font-size:15px;font-weight:700;color:var(--purple-dk);font-variant-numeric:tabular-nums}
+.time-item-val.no-svc{font-size:13px;color:var(--text3);font-weight:400}
+
+mark{background:#FFF3CD;border-radius:2px;padding:0 1px}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-logo">🚆 Orari<span> Treni</span></div>
+  <div class="topbar-actions">
+    <button class="icon-btn" id="btn-upload" onclick="document.getElementById('file-input-treni').click()" title="Carica Excel personalizzato">📂</button>
+    <input type="file" id="file-input-treni" accept=".xlsx,.xls" style="display:none" onchange="loadExcelTreni(event)">
+  </div>
+</div>
+
+<!-- SCROLL AREA -->
+<div class="scroll-area" id="scroll-area">
+
+  <!-- Upload empty state -->
+  <div id="treni-empty">
+    <div style="padding:32px 24px 8px;text-align:center">
+      <div style="font-size:56px;margin-bottom:12px">🚆</div>
+      <div style="font-size:20px;font-weight:800;color:var(--text);margin-bottom:6px">Orari treni</div>
+      <div style="font-size:14px;color:var(--text2);line-height:1.5;max-width:300px;margin:0 auto">Nessun file caricato. Importa un Excel con i fogli per località.</div>
+    </div>
+    <div class="upload-card" onclick="document.getElementById('file-input-treni').click()">
+      <div class="upload-card-icon">📂</div>
+      <div class="upload-card-title">Carica il file treni</div>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div id="treni-content" style="display:none">
+    <div class="file-chip" id="treni-chip" style="display:none">
+      📊 <strong id="treni-fname"></strong>
+      <button class="file-chip-del" onclick="clearTreni()">✕</button>
+    </div>
+    <div class="loc-scroll" id="loc-scroll"></div>
+    <div class="search-bar">
+      <span>🔍</span>
+      <input type="search" id="train-search" placeholder="Cerca n° treno o orario…" oninput="renderTrains()">
+    </div>
+    <div class="train-match" id="train-match"></div>
+    <div id="train-cards"></div>
+  </div>
+
+</div><!-- /scroll-area -->
+
+<script>
+let treniData={}, selLoc='', treniFileName='', expandedTreno=null;
+
+/* ══ CARICAMENTO EXCEL PERSONALIZZATO ══ */
+function loadExcelTreni(evt){
+  const file=evt.target.files[0];if(!file)return;
+  treniFileName=file.name;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const wb=XLSX.read(e.target.result,{type:'array'});
+      const newData={};
+      wb.SheetNames.forEach(sh=>{
+        const ws=wb.Sheets[sh];
+        const raw=XLSX.utils.sheet_to_json(ws,{header:1,raw:false});
+        if(!raw||raw.length<2)return;
+        let hdrIdx=0;
+        for(let i=0;i<Math.min(raw.length,5);i++){
+          const r=raw[i]||[];
+          const others=r.slice(1).filter(c=>c!==null&&c!==undefined&&String(c).trim()!=='');
+          if(String(r[0]||'').trim()&&others.length>=1){hdrIdx=i;break;}
+        }
+        const hdr=(raw[hdrIdx]||[]).map(c=>String(c||'').trim());
+        const colHeaders=hdr.slice(1).filter(c=>c!=='');
+        const rows=[];
+        for(let i=hdrIdx+1;i<raw.length;i++){
+          const r=raw[i];if(!r)continue;
+          const treno=String(r[0]||'').trim();if(!treno)continue;
+          const times=colHeaders.map((_,ci)=>String(r[ci+1]||'').trim());
+          rows.push({treno,times});
+        }
+        if(rows.length)newData[sh]={colHeaders,rows};
+      });
+      const locs=Object.keys(newData);
+      if(!locs.length){showToast('❌ Nessun foglio valido trovato');return;}
+      treniData=newData;
+      selLoc=locs[0];expandedTreno=null;
+      initTreniCustom();
+      showToast('✅ Orari caricati · '+locs.length+' località');
+    }catch(ex){showToast('❌ '+ex.message);}
+  };
+  reader.readAsArrayBuffer(file);evt.target.value='';
+}
+
+function initTreniCustom(){
+  document.getElementById('treni-empty').style.display='none';
+  document.getElementById('treni-content').style.display='block';
+  document.getElementById('treni-fname').textContent=treniFileName;
+  document.getElementById('treni-chip').style.display='flex';
+  buildLocScroll();renderTrains();
+}
+
+function clearTreni(){
+  treniFileName='';
+  treniData={};selLoc='';expandedTreno=null;
+  document.getElementById('treni-content').style.display='none';
+  document.getElementById('treni-chip').style.display='none';
+  document.getElementById('treni-empty').style.display='';
+}
+
+/* ══ RENDERING (comune a entrambe le fonti) ══ */
+function buildLocScroll(){
+  const locs=Object.keys(treniData);
+  document.getElementById('loc-scroll').innerHTML=locs.map((l,i)=>{
+    const safe=l.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `<div class="loc-chip${i===0?' active':''}" onclick="selLoc='${safe}';expandedTreno=null;document.querySelectorAll('.loc-chip').forEach((c,j)=>c.classList.toggle('active',j===${i}));renderTrains()">${l}</div>`;
+  }).join('');
+}
+
+function renderTrains(){
+  const loc=treniData[selLoc];if(!loc)return;
+  const q=(document.getElementById('train-search').value||'').toLowerCase().trim();
+  let rows=loc.rows;
+  if(q)rows=rows.filter(r=>r.treno.toLowerCase().includes(q)||r.times.some(t=>t.toLowerCase().includes(q)));
+  document.getElementById('train-match').textContent=q?`${rows.length} risultati`:'';
+  function hl(s){if(!q||!s)return s||'';return s.replace(new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'),'<mark>$1</mark>');}
+  const container=document.getElementById('train-cards');
+  if(!rows.length){container.innerHTML=`<div class="empty-state"><div class="empty-icon">🚆</div><div class="empty-title">Nessun treno trovato</div></div>`;return;}
+  container.innerHTML=rows.map(r=>{
+    const isExp=expandedTreno===r.treno;
+    // Split into odd-numbered and even-numbered passages (1,3,5… / 2,4,6…)
+    const dispari=[], pari=[];
+    r.times.forEach((t,ci)=>{
+      const numero=ci+1;
+      if(!t) return;
+      if(numero%2===1) dispari.push(t); else pari.push(t);
+    });
+    function colCards(list){
+      if(!list.length) return `<div style="font-size:12px;color:var(--text3);padding:8px 0">—</div>`;
+      return list.map(t=>`<div class="time-item"><div class="time-item-val">${t}</div></div>`).join('');
+    }
+    const safe=r.treno.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    return `<div class="train-card${isExp?' expanded':''}">
+      <div class="train-card-header" onclick="toggleTrain('${safe}')">
+        <div><div class="train-num">Treno ${hl(r.treno)}</div></div>
+        <span class="train-arrow">›</span>
+      </div>
+      <div class="train-detail">
+        <div class="time-cols">
+          <div class="time-col">
+            <div class="time-col-lbl">Dispari</div>
+            <div class="time-grid">${colCards(dispari)}</div>
+          </div>
+          <div class="time-col">
+            <div class="time-col-lbl">Pari</div>
+            <div class="time-grid">${colCards(pari)}</div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleTrain(treno){
+  expandedTreno=(expandedTreno===treno)?null:treno;
+  renderTrains();
+  setTimeout(()=>{const el=document.querySelector('.train-card.expanded');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},50);
+}
+
+function showToast(msg){
+  const t=document.createElement('div');
+  t.textContent=msg;
+  t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#3C3489;color:white;padding:11px 20px;border-radius:20px;font-size:14px;font-weight:600;z-index:300;opacity:0;transition:opacity .25s;white-space:nowrap;max-width:90vw;text-align:center';
+  document.body.appendChild(t);
+  requestAnimationFrame(()=>t.style.opacity='1');
+  setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),300);},2500);
+}
+
+document.addEventListener('dragover',e=>e.preventDefault());
+document.addEventListener('drop',e=>{
+  e.preventDefault();
+  const file=[...e.dataTransfer.files].find(f=>f.name.endsWith('.xlsx')||f.name.endsWith('.xls'));
+  if(file)loadExcelTreni({target:{files:[file],value:''}});
+});
+
+// Init: nessun dato di default, mostra schermata di caricamento
+document.getElementById('treni-empty').style.display='';
+
+// PWA: register service worker for offline support (skip on claude.ai sandbox)
+if('serviceWorker' in navigator && !location.hostname.includes('claude')){
+  navigator.serviceWorker.register('./sw-treni.js')
+    .then(()=>console.log('SW treni registrato'))
+    .catch(e=>console.warn('SW treni:', e));
+}
+</script>
+</body>
+</html>

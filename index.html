@@ -16,18 +16,18 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
-  --bg:#F4F3FB; --surface:#fff; --surface2:#F8F7FF;
-  --border:#E2DFFA; --border2:#CBC6F0;
-  --purple:#534AB7; --purple-dk:#3C3489; --purple-lt:#EEEDFE;
-  --text:#1A1735; --text2:#6B6891; --text3:#A09DC0;
-  --red:#D84040; --green:#2A9D5C;
-  --top-h:56px; --safe-b:env(safe-area-inset-bottom,0px);
+  --bg:#F4F3FB;--surface:#fff;--surface2:#F8F7FF;
+  --border:#E2DFFA;--border2:#CBC6F0;
+  --purple:#534AB7;--purple-dk:#3C3489;--purple-lt:#EEEDFE;
+  --text:#1A1735;--text2:#6B6891;--text3:#A09DC0;
+  --red:#D84040;--green:#2A9D5C;
+  --top-h:56px;--safe-b:env(safe-area-inset-bottom,0px);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column}
 
-/* ── TOPBAR ── */
+/* TOPBAR */
 .topbar{height:var(--top-h);background:var(--purple-dk);display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex-shrink:0;z-index:50}
 .topbar-logo{font-size:18px;font-weight:800;color:white;letter-spacing:-.5px}
 .topbar-logo span{color:#AFA9EC}
@@ -35,27 +35,32 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .icon-btn:active{background:rgba(255,255,255,.25)}
 .admin-badge{position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:#4ade80;border:1.5px solid var(--purple-dk)}
 
-/* ── SCROLL AREA ── */
-.scroll-area{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--safe-b)+16px)}
+/* NAV BARS */
+.nav-bar{display:flex;gap:6px;padding:10px 16px 4px;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
+.nav-bar::-webkit-scrollbar{display:none}
+.nav-tab{flex-shrink:0;padding:8px 18px;border-radius:12px;font-size:13px;font-weight:700;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;transition:all .15s}
+.nav-tab.active{background:var(--purple-dk);color:white;border-color:var(--purple-dk)}
+/* Giorno tabs: colori distinti */
+.giorno-tab{flex-shrink:0;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:700;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;transition:all .15s}
+.giorno-tab.active.lv  {background:#3C3489;color:white;border-color:#3C3489}
+.giorno-tab.active.sab {background:#7B3FB5;color:white;border-color:#7B3FB5}
+.giorno-tab.active.fes {background:#B53F6B;color:white;border-color:#B53F6B}
 
-/* ── LINEA TABS ── */
-.linea-bar{display:flex;gap:6px;padding:10px 16px 4px;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
-.linea-bar::-webkit-scrollbar{display:none}
-.linea-tab{flex-shrink:0;padding:8px 18px;border-radius:12px;font-size:13px;font-weight:700;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;transition:all .15s}
-.linea-tab.active{background:var(--purple-dk);color:white;border-color:var(--purple-dk)}
-
-/* ── STAZIONE CHIPS ── */
-.loc-scroll{display:flex;gap:8px;padding:6px 16px 2px;overflow-x:auto;scrollbar-width:none}
+/* STAZIONE CHIPS */
+.loc-scroll{display:flex;gap:8px;padding:4px 16px 2px;overflow-x:auto;scrollbar-width:none}
 .loc-scroll::-webkit-scrollbar{display:none}
 .loc-chip{flex-shrink:0;padding:7px 14px;border-radius:20px;font-size:13px;font-weight:600;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;transition:all .15s}
 .loc-chip.active{background:var(--purple);color:white;border-color:var(--purple)}
 
-/* ── SEARCH ── */
+/* SEARCH */
 .search-bar{margin:8px 16px;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px}
 .search-bar input{flex:1;border:none;outline:none;font-size:14px;background:none;color:var(--text)}
 .train-match{font-size:11px;color:var(--text2);padding:2px 16px 6px}
 
-/* ── TRAIN CARDS ── */
+/* SCROLL */
+.scroll-area{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--safe-b)+16px)}
+
+/* TRAIN CARDS */
 .train-card{background:var(--surface);border-radius:16px;border:1px solid var(--border);margin:0 16px 10px;overflow:hidden;transition:box-shadow .15s}
 .train-card.expanded{box-shadow:0 4px 20px rgba(83,74,183,.12);border-color:var(--purple)}
 .train-card-header{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;-webkit-user-select:none;user-select:none}
@@ -73,7 +78,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .time-item-val{font-size:15px;font-weight:700;color:var(--purple-dk);font-variant-numeric:tabular-nums}
 mark{background:#FFF3CD;border-radius:2px;padding:0 1px}
 
-/* ── STATES ── */
+/* STATES */
 .empty-state{padding:48px 24px;text-align:center}
 .empty-icon{font-size:48px;margin-bottom:12px}
 .empty-title{font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px}
@@ -81,17 +86,15 @@ mark{background:#FFF3CD;border-radius:2px;padding:0 1px}
 .spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:spin .8s linear infinite;margin:60px auto}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* ── OVERLAY ── */
+/* OVERLAY */
 .overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:none;align-items:flex-end;justify-content:center}
 .overlay.open{display:flex}
-
-/* ── MODAL ── */
 .modal{background:var(--surface);border-radius:24px 24px 0 0;width:100%;max-width:480px;padding:20px 20px calc(var(--safe-b)+20px);max-height:90vh;overflow-y:auto}
 .modal-handle{width:40px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 16px}
 .modal-title{font-size:18px;font-weight:800;color:var(--text);margin-bottom:4px}
 .modal-sub{font-size:13px;color:var(--text2);margin-bottom:20px}
 
-/* ── FORM ── */
+/* FORM */
 .field{margin-bottom:14px}
 .field label{display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
 .field input{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:15px;background:var(--surface2);color:var(--text);outline:none;transition:border-color .15s}
@@ -103,14 +106,18 @@ mark{background:#FFF3CD;border-radius:2px;padding:0 1px}
 .btn-secondary{width:100%;padding:12px;border:1.5px solid var(--border);border-radius:14px;background:none;color:var(--text2);font-size:14px;font-weight:600;cursor:pointer;margin-top:8px}
 .err-msg{color:var(--red);font-size:13px;margin-top:8px;text-align:center;min-height:18px}
 
-/* ── ADMIN PANEL ── */
+/* ADMIN */
 .upload-drop{border:2px dashed var(--border2);border-radius:16px;padding:28px 16px;text-align:center;cursor:pointer;transition:all .15s;margin-bottom:14px}
 .upload-drop.drag{background:var(--purple-lt);border-color:var(--purple)}
-.upload-drop:active{background:var(--purple-lt)}
 .file-list{margin-bottom:14px}
 .file-row{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);border-radius:12px;margin-bottom:6px;font-size:13px}
 .file-row-name{flex:1;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.file-row-del{background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:2px 4px}
+.file-row-tag{padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700;color:white}
+.tag-lv {background:#3C3489}
+.tag-sab{background:#7B3FB5}
+.tag-fes{background:#B53F6B}
+.tag-unk{background:var(--text3)}
+.file-row-del{background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:2px 4px;flex-shrink:0}
 .meta-info{background:var(--surface2);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.6}
 .meta-info strong{color:var(--text)}
 .btn-danger{width:100%;padding:12px;border:1.5px solid #fecaca;border-radius:14px;background:none;color:var(--red);font-size:14px;font-weight:600;cursor:pointer;margin-top:8px}
@@ -128,11 +135,8 @@ mark{background:#FFF3CD;border-radius:2px;padding:0 1px}
 
 <!-- SCROLL AREA -->
 <div class="scroll-area" id="scroll-area">
-
-  <!-- Loading -->
   <div id="state-loading"><div class="spinner"></div></div>
 
-  <!-- No data -->
   <div id="state-empty" style="display:none">
     <div class="empty-state">
       <div class="empty-icon">🚆</div>
@@ -141,10 +145,14 @@ mark{background:#FFF3CD;border-radius:2px;padding:0 1px}
     </div>
   </div>
 
-  <!-- Main content -->
   <div id="state-data" style="display:none">
-    <div class="linea-bar" id="linea-bar"></div>
+    <!-- Linea tabs -->
+    <div class="nav-bar" id="linea-bar"></div>
+    <!-- Giorno tabs -->
+    <div class="nav-bar" id="giorno-bar" style="padding-top:2px;padding-bottom:2px"></div>
+    <!-- Stazione chips -->
     <div class="loc-scroll" id="loc-scroll"></div>
+    <!-- Search -->
     <div class="search-bar">
       <span>🔍</span>
       <input type="search" id="train-search" placeholder="Cerca n° treno o orario…" oninput="renderTrains()">
@@ -152,14 +160,13 @@ mark{background:#FFF3CD;border-radius:2px;padding:0 1px}
     <div class="train-match" id="train-match"></div>
     <div id="train-cards"></div>
   </div>
-
 </div>
 
-<!-- OVERLAY (login + admin panel) -->
+<!-- OVERLAY -->
 <div class="overlay" id="overlay" onclick="overlayClickOutside(event)">
   <div class="modal" id="modal-content">
 
-    <!-- LOGIN VIEW -->
+    <!-- LOGIN -->
     <div id="view-login">
       <div class="modal-handle"></div>
       <div class="modal-title">Accesso Admin</div>
@@ -178,7 +185,7 @@ mark{background:#FFF3CD;border-radius:2px;padding:0 1px}
       <button class="btn-secondary" onclick="closeOverlay()">Annulla</button>
     </div>
 
-    <!-- ADMIN PANEL VIEW -->
+    <!-- ADMIN PANEL -->
     <div id="view-admin" style="display:none">
       <div class="modal-handle"></div>
       <div class="modal-title">Gestione Orari</div>
@@ -199,22 +206,20 @@ mark{background:#FFF3CD;border-radius:2px;padding:0 1px}
            ondrop="handleDrop(event)">
         <div style="font-size:36px;margin-bottom:8px">📂</div>
         <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Carica file Excel</div>
-        <div style="font-size:12px;color:var(--text2)">Seleziona uno o più file · trascina qui</div>
+        <div style="font-size:12px;color:var(--text2)">LV · Sabato · Festivo — tutte le linee insieme</div>
       </div>
       <input type="file" id="file-input-admin" accept=".xlsx,.xls" multiple style="display:none" onchange="addFiles(event)">
 
       <div class="file-list" id="file-list"></div>
-
       <button class="btn-primary" id="btn-save" onclick="saveAll()" style="display:none">💾 Salva orari su Firebase</button>
-      <button class="btn-danger" id="btn-clear-db" onclick="clearDatabase()">🗑 Cancella tutti gli orari</button>
+      <button class="btn-danger" onclick="clearDatabase()">🗑 Cancella tutti gli orari</button>
       <button class="btn-secondary" onclick="doLogout()">Esci dall'account</button>
     </div>
-
   </div>
 </div>
 
 <script>
-/* ══ FIREBASE CONFIG ══ */
+/* ══ CONFIG ══ */
 const FB_CONFIG = {
   apiKey:            "AIzaSyAC754JvbEpQSxG8VyZgcGEIVyBkI9OZp8",
   authDomain:        "turni-treni.firebaseapp.com",
@@ -229,20 +234,43 @@ const auth = firebase.auth();
 const db   = firebase.database();
 const DB_PATH = 'orari-treni';
 
-/* ══ STATO APP ══ */
-let treniData   = {};   // {M1:{RHO FIERA:{treni:[...]}, ...}, M2:{...}}
+/* ══ COSTANTI ══ */
+const GIORNO_LABELS = { LV:'Lun-Ven', SAB:'Sabato', FES:'Festivo' };
+const GIORNO_ORDER  = ['LV','SAB','FES'];
+const GIORNO_CSS    = { LV:'lv', SAB:'sab', FES:'fes' };
+
+// Stazioni da includere per linea
+const STAZIONI_TARGET = {
+  M1:[
+    {match:'PAGANO',          label:'PAGANO'},
+    {match:'SESTO 1° MAGGIO', label:'SESTO 1° MAGGIO'},
+    {match:'RHO FIERA',       label:'RHO FIERA'},
+    {match:'BISCEGLIE',       label:'BISCEGLIE'},
+  ],
+  M2:[
+    {match:'FAMAGOSTA',       label:'FAMAGOSTA'},
+    {match:'CASCINA GOBBA',   label:'C.NA GOBBA'},
+  ],
+  M3:[
+    {match:'COMASINA',        label:'COMASINA'},
+    {match:'S. DONATO',       label:'S.DONATO'},
+  ],
+};
+
+const COL_GROUPS = [[2,3,7],[9,10,14],[16,17,21],[23,24,28]];
+const DATI_ROW   = 11;
+
+/* ══ STATO ══ */
+let treniData   = {};   // {M1:{LV:{PAGANO:{treni:[...]}}}}
 let selLinea    = '';
+let selGiorno   = '';
 let selStazione = '';
 let expandedTR  = null;
-let adminFiles  = [];   // file selezionati dall'admin (non ancora salvati)
+let adminFiles  = [];
 let currentUser = null;
 
 /* ══ BOOT ══ */
-auth.onAuthStateChanged(user => {
-  currentUser = user;
-  updateAdminBtn();
-});
-
+auth.onAuthStateChanged(u => { currentUser=u; updateAdminBtn(); });
 loadFromFirebase();
 
 /* ══ FIREBASE LOAD ══ */
@@ -251,16 +279,23 @@ function loadFromFirebase(){
   db.ref(DB_PATH+'/linee').once('value')
     .then(snap => {
       const val = snap.val();
-      if(!val || !Object.keys(val).length){ showState('empty'); return; }
+      if(!val||!Object.keys(val).length){ showState('empty'); return; }
       treniData = val;
       selLinea  = Object.keys(treniData).sort()[0];
-      selStazione = Object.keys(treniData[selLinea]||{}).sort()[0]||'';
+      selGiorno = firstGiorno(selLinea);
+      selStazione = firstStazione(selLinea, selGiorno);
       showState('data');
-      buildLinee();
-      buildStazioni();
-      renderTrains();
+      buildLinee(); buildGiorni(); buildStazioni(); renderTrains();
     })
     .catch(()=>showState('empty'));
+}
+
+function firstGiorno(linea){
+  const giorni = Object.keys(treniData[linea]||{});
+  return GIORNO_ORDER.find(g=>giorni.includes(g)) || giorni[0] || '';
+}
+function firstStazione(linea, giorno){
+  return Object.keys((treniData[linea]||{})[giorno]||{}).sort()[0]||'';
 }
 
 function showState(s){
@@ -269,65 +304,78 @@ function showState(s){
   document.getElementById('state-data').style.display    = s==='data'   ?'':'none';
 }
 
-/* ══ RENDER LINEE ══ */
+/* ══ BUILD LINEE ══ */
 function buildLinee(){
   const linee = Object.keys(treniData).sort();
   const bar = document.getElementById('linea-bar');
-  if(linee.length<=1){ bar.style.display='none'; return; }
-  bar.style.display='flex';
+  bar.style.display = linee.length<=1 ? 'none' : 'flex';
   bar.innerHTML = linee.map(l=>{
-    const safe=l.replace(/'/g,"\\'");
-    return `<div class="linea-tab${l===selLinea?' active':''}" onclick="selectLinea('${safe}',this)">${l}</div>`;
+    const s=l.replace(/'/g,"\\'");
+    return `<div class="nav-tab${l===selLinea?' active':''}" onclick="selectLinea('${s}',this)">${l}</div>`;
   }).join('');
 }
 
 function selectLinea(l, el){
   selLinea=l; expandedTR=null;
-  document.querySelectorAll('.linea-tab').forEach(t=>t.classList.toggle('active',t===el));
-  selStazione = Object.keys(treniData[selLinea]||{}).sort()[0]||'';
-  buildStazioni(); renderTrains();
-  document.getElementById('train-search').value='';
-  document.getElementById('train-match').textContent='';
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.toggle('active',t===el));
+  selGiorno=firstGiorno(l);
+  selStazione=firstStazione(l,selGiorno);
+  buildGiorni(); buildStazioni(); renderTrains();
+  resetSearch();
 }
 
-/* ══ RENDER STAZIONI ══ */
+/* ══ BUILD GIORNI ══ */
+function buildGiorni(){
+  const disponibili = Object.keys(treniData[selLinea]||{});
+  const giorni = GIORNO_ORDER.filter(g=>disponibili.includes(g));
+  const bar = document.getElementById('giorno-bar');
+  bar.style.display = giorni.length<=1 ? 'none' : 'flex';
+  bar.innerHTML = giorni.map(g=>{
+    const css=GIORNO_CSS[g]||'';
+    const s=g.replace(/'/g,"\\'");
+    return `<div class="giorno-tab${g===selGiorno?' active '+css:''}" onclick="selectGiorno('${s}',this,'${css}')">${GIORNO_LABELS[g]||g}</div>`;
+  }).join('');
+}
+
+function selectGiorno(g, el, css){
+  selGiorno=g; expandedTR=null;
+  document.querySelectorAll('.giorno-tab').forEach(t=>{
+    t.classList.remove('active','lv','sab','fes');
+  });
+  el.classList.add('active',css);
+  selStazione=firstStazione(selLinea,g);
+  buildStazioni(); renderTrains();
+  resetSearch();
+}
+
+/* ══ BUILD STAZIONI ══ */
 function buildStazioni(){
-  const stazioni = Object.entries(treniData[selLinea]||{}).sort((a,b)=>a[0].localeCompare(b[0]));
-  document.getElementById('loc-scroll').innerHTML = stazioni.map(([key,val])=>{
+  const entries=Object.entries((treniData[selLinea]||{})[selGiorno]||{}).sort((a,b)=>a[0].localeCompare(b[0]));
+  document.getElementById('loc-scroll').innerHTML=entries.map(([key,val])=>{
     const label=val.nome||key;
-    const safe=key.replace(/'/g,"\\'");
-    return `<div class="loc-chip${key===selStazione?' active':''}" onclick="selectStazione('${safe}',this)">${label}</div>`;
+    const s=key.replace(/'/g,"\\'");
+    return `<div class="loc-chip${key===selStazione?' active':''}" onclick="selectStazione('${s}',this)">${label}</div>`;
   }).join('');
 }
 
 function selectStazione(s,el){
   selStazione=s; expandedTR=null;
   document.querySelectorAll('.loc-chip').forEach(c=>c.classList.toggle('active',c===el));
-  renderTrains();
-  document.getElementById('train-search').value='';
-  document.getElementById('train-match').textContent='';
+  renderTrains(); resetSearch();
 }
 
 /* ══ RENDER TRENI ══ */
-function oraToMin(ora){
-  const s=String(ora||'').trim();
-  const half=s.endsWith('½');
-  const p=s.replace('½','').split(':');
-  if(p.length<2)return 9999;
-  return parseInt(p[0])*60+parseInt(p[1])+(half?.5:0);
-}
-
 function renderTrains(){
-  const staz = (treniData[selLinea]||{})[selStazione];
-  if(!staz){ document.getElementById('train-cards').innerHTML=''; return; }
+  const staz=((treniData[selLinea]||{})[selGiorno]||{})[selStazione];
+  if(!staz){document.getElementById('train-cards').innerHTML='';return;}
   const q=(document.getElementById('train-search').value||'').toLowerCase().trim();
   let treni=[...(staz.treni||[])];
   if(q) treni=treni.filter(t=>
     t.tabella.toLowerCase().includes(q)||
     (t.corse||[]).some(c=>c.ora.toLowerCase().includes(q)||c.corsa.toLowerCase().includes(q))
   );
-  document.getElementById('train-match').textContent = q?`${treni.length} risultati`:'';
-  function hl(s){if(!q||!s)return s||'';return String(s).replace(new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'),'<mark>$1</mark>');}
+  document.getElementById('train-match').textContent=q?`${treni.length} risultati`:'';
+  function hl(s){if(!q||!s)return String(s||'');return String(s).replace(new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'),'<mark>$1</mark>');}
   const container=document.getElementById('train-cards');
   if(!treni.length){
     container.innerHTML=`<div class="empty-state"><div class="empty-icon">🚆</div><div class="empty-title">Nessun treno trovato</div></div>`;
@@ -368,36 +416,29 @@ function toggleTrain(tab){
   setTimeout(()=>{const el=document.querySelector('.train-card.expanded');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},50);
 }
 
-/* ══ ADMIN: OVERLAY ══ */
+function resetSearch(){
+  document.getElementById('train-search').value='';
+  document.getElementById('train-match').textContent='';
+}
+
+/* ══ ADMIN ══ */
 function updateAdminBtn(){
   const btn=document.getElementById('admin-btn');
   const badge=btn.querySelector('.admin-badge');
   if(currentUser){
-    btn.textContent='👤'; btn.title='Pannello admin';
+    btn.textContent='👤';
     if(!badge){const b=document.createElement('div');b.className='admin-badge';btn.appendChild(b);}
-  } else {
-    btn.textContent='🔒'; btn.title='Accesso admin';
+  }else{
+    btn.textContent='🔒';
     if(badge)badge.remove();
   }
 }
 
-function openAdmin(){
-  if(currentUser){ showAdminPanel(); }
-  else { showLoginView(); }
-  document.getElementById('overlay').classList.add('open');
-}
+function openAdmin(){ currentUser?showAdminPanel():showLoginView(); document.getElementById('overlay').classList.add('open'); }
+function closeOverlay(){ document.getElementById('overlay').classList.remove('open'); adminFiles=[]; renderFileList(); }
+function overlayClickOutside(e){ if(e.target===document.getElementById('overlay'))closeOverlay(); }
 
-function closeOverlay(){
-  document.getElementById('overlay').classList.remove('open');
-  adminFiles=[];
-  renderFileList();
-}
-
-function overlayClickOutside(e){
-  if(e.target===document.getElementById('overlay'))closeOverlay();
-}
-
-/* ── LOGIN ── */
+/* LOGIN */
 function showLoginView(){
   document.getElementById('view-login').style.display='';
   document.getElementById('view-admin').style.display='none';
@@ -405,27 +446,19 @@ function showLoginView(){
   document.getElementById('inp-matricola').value='';
   document.getElementById('inp-password').value='';
 }
-
 function doLogin(){
   const mat=document.getElementById('inp-matricola').value.trim();
   const pwd=document.getElementById('inp-password').value;
   const btn=document.getElementById('btn-login');
   if(!mat||!pwd){document.getElementById('login-err').textContent='Compila tutti i campi';return;}
   btn.disabled=true;btn.textContent='Accesso…';
-  const email=mat+'@turniapp.local';
-  auth.signInWithEmailAndPassword(email,pwd)
-    .then(()=>{ showAdminPanel(); })
-    .catch(e=>{
-      document.getElementById('login-err').textContent='Credenziali non valide';
-      btn.disabled=false;btn.textContent='Accedi';
-    });
+  auth.signInWithEmailAndPassword(mat+'@turniapp.local',pwd)
+    .then(()=>showAdminPanel())
+    .catch(()=>{document.getElementById('login-err').textContent='Credenziali non valide';btn.disabled=false;btn.textContent='Accedi';});
 }
+function doLogout(){ auth.signOut().then(()=>closeOverlay()); }
 
-function doLogout(){
-  auth.signOut().then(()=>{closeOverlay();});
-}
-
-/* ── ADMIN PANEL ── */
+/* ADMIN PANEL */
 function showAdminPanel(){
   document.getElementById('view-login').style.display='none';
   document.getElementById('view-admin').style.display='';
@@ -433,7 +466,6 @@ function showAdminPanel(){
   document.getElementById('admin-user-label').textContent='Connesso come matricola '+mat;
   loadMeta();
 }
-
 function loadMeta(){
   db.ref(DB_PATH+'/meta').once('value').then(snap=>{
     const m=snap.val();
@@ -445,87 +477,73 @@ function loadMeta(){
         `<strong>Ultimo aggiornamento:</strong> ${d.toLocaleString('it-IT')}<br>`+
         `<strong>Da:</strong> ${m.updatedBy||'—'}<br>`+
         `<strong>File:</strong> ${m.fileNames||'—'}`;
-    } else { sec.style.display='none'; }
+    }else{sec.style.display='none';}
   });
 }
 
-/* ── FILE SELECTION ── */
-function addFiles(evt){
-  const newFiles=[...evt.target.files];
-  newFiles.forEach(f=>{ if(!adminFiles.find(x=>x.name===f.name))adminFiles.push(f); });
-  renderFileList();
-  evt.target.value='';
+/* FILE SELECTION */
+function toKey(s){ return s.replace(/[.#$\/\[\]]/g,'_'); }
+
+function detectGiorno(filename){
+  const u=filename.toUpperCase();
+  if(/_LV[_.\s]|[_.\s]LV_|\bLV\b/.test(u)) return 'LV';
+  if(/SAB/.test(u)) return 'SAB';
+  if(/FES|DOM|FEST/.test(u)) return 'FES';
+  return null;
 }
 
+function matchStazione(linea, nomeStazione){
+  const targets=STAZIONI_TARGET[linea.toUpperCase()]||[];
+  const upper=nomeStazione.toUpperCase();
+  return targets.find(t=>upper.includes(t.match.toUpperCase()))||null;
+}
+
+function addFiles(evt){
+  [...evt.target.files].forEach(f=>{if(!adminFiles.find(x=>x.name===f.name))adminFiles.push(f);});
+  renderFileList(); evt.target.value='';
+}
 function handleDrop(e){
   e.preventDefault();
   document.getElementById('upload-drop').classList.remove('drag');
-  const files=[...e.dataTransfer.files].filter(f=>f.name.endsWith('.xlsx')||f.name.endsWith('.xls'));
-  files.forEach(f=>{ if(!adminFiles.find(x=>x.name===f.name))adminFiles.push(f); });
+  [...e.dataTransfer.files].filter(f=>f.name.match(/\.xlsx?$/i))
+    .forEach(f=>{if(!adminFiles.find(x=>x.name===f.name))adminFiles.push(f);});
   renderFileList();
 }
-
-function removeFile(i){
-  adminFiles.splice(i,1);
-  renderFileList();
-}
-
+function removeFile(i){ adminFiles.splice(i,1); renderFileList(); }
 function renderFileList(){
   const list=document.getElementById('file-list');
-  const btn=document.getElementById('btn-save');
-  list.innerHTML=adminFiles.map((f,i)=>`
-    <div class="file-row">
+  document.getElementById('btn-save').style.display=adminFiles.length?'':'none';
+  list.innerHTML=adminFiles.map((f,i)=>{
+    const g=detectGiorno(f.name);
+    const tagCss=g?'tag-'+g.toLowerCase():'tag-unk';
+    const tagLbl=g?(GIORNO_LABELS[g]||g):'?';
+    return `<div class="file-row">
       <span>📊</span>
       <span class="file-row-name">${f.name}</span>
+      <span class="file-row-tag ${tagCss}">${tagLbl}</span>
       <button class="file-row-del" onclick="removeFile(${i})">✕</button>
-    </div>`).join('');
-  btn.style.display=adminFiles.length?'':'none';
+    </div>`;
+  }).join('');
 }
 
-/* ── PARSE & SAVE ── */
-// Firebase non accetta . # $ / [ ] nelle chiavi → li sostituiamo con _
-function toKey(s){ return s.replace(/[.#$\/\[\]]/g,'_'); }
-
-// Stazioni da includere per linea: match = sottostringa del nome foglio (case-insensitive)
-const STAZIONI_TARGET = {
-  M1: [
-    { match:'PAGANO',          label:'PAGANO'          },
-    { match:'SESTO 1° MAGGIO', label:'SESTO 1° MAGGIO' },
-    { match:'RHO FIERA',       label:'RHO FIERA'       },
-    { match:'BISCEGLIE',       label:'BISCEGLIE'       },
-  ],
-  M2: [
-    { match:'FAMAGOSTA',       label:'FAMAGOSTA'       },
-    { match:'CASCINA GOBBA',   label:'C.NA GOBBA'      },
-  ],
-  M3: [
-    { match:'COMASINA',        label:'COMASINA'        },
-    { match:'S. DONATO',       label:'S.DONATO'        },
-  ],
-};
-
-function matchStazione(linea, nomeStazione){
-  const targets = STAZIONI_TARGET[linea.toUpperCase()]||[];
-  const upper = nomeStazione.toUpperCase();
-  return targets.find(t => upper.includes(t.match.toUpperCase())) || null;
-}
-
-const COL_GROUPS=[[2,3,7],[9,10,14],[16,17,21],[23,24,28]];
-const DATI_ROW=11;
-
+/* PARSE */
 function parseExcelFile(file){
   return new Promise((resolve,reject)=>{
+    const giorno=detectGiorno(file.name);
+    if(!giorno){reject(new Error('Giorno non riconosciuto nel nome file: '+file.name));return;}
     const reader=new FileReader();
     reader.onload=e=>{
       try{
         const wb=XLSX.read(e.target.result,{type:'array',raw:false});
         const result={};
         wb.SheetNames.forEach(sh=>{
-          // Rileva linea: "PAGANO - M1" → linea=M1, stazione=PAGANO
           const m=sh.match(/^(.*?)\s*-\s*(M\d+)\s*$/i);
           if(!m)return;
           const stazione=m[1].trim();
           const linea=m[2].toUpperCase();
+          const match=matchStazione(linea,stazione);
+          if(!match)return;
+          const label=match.label;
           const ws=wb.Sheets[sh];
           const raw=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
           const passaggi=[];
@@ -535,24 +553,19 @@ function parseExcelFile(file){
               const tab=String(row[ct]||'').trim();
               const cor=String(row[cc]||'').trim();
               const ora=String(row[co]||'').trim();
-              if(ora&&tab&&cor) passaggi.push({tabella:tab,corsa:cor,ora});
+              if(ora&&tab&&cor)passaggi.push({tabella:tab,corsa:cor,ora});
             });
           }
           if(!passaggi.length)return;
-          // Raggruppa per tabella, ordina per numero tabella
           const byTab={};
           passaggi.forEach(p=>{
             if(!byTab[p.tabella])byTab[p.tabella]={tabella:p.tabella,corse:[]};
             byTab[p.tabella].corse.push({corsa:p.corsa,ora:p.ora});
           });
           const treni=Object.values(byTab).sort((a,b)=>parseInt(a.tabella)-parseInt(b.tabella));
-          // Filtra: solo stazioni nel whitelist
-          const match = matchStazione(linea, stazione);
-          if(!match) return;
-          const label = match.label;
-
           if(!result[linea])result[linea]={};
-          result[linea][toKey(label)]={nome:label, treni};
+          if(!result[linea][giorno])result[linea][giorno]={};
+          result[linea][giorno][toKey(label)]={nome:label,treni};
         });
         resolve(result);
       }catch(ex){reject(ex);}
@@ -561,21 +574,24 @@ function parseExcelFile(file){
   });
 }
 
+/* SAVE */
 async function saveAll(){
   const btn=document.getElementById('btn-save');
   const pb=document.getElementById('progress-bar');
   const pf=document.getElementById('progress-fill');
   btn.disabled=true;btn.textContent='Elaborazione…';
   pb.style.display='';pf.style.width='0%';
-
   try{
     const merged={};
     for(let i=0;i<adminFiles.length;i++){
       pf.style.width=Math.round((i/adminFiles.length)*80)+'%';
       const data=await parseExcelFile(adminFiles[i]);
-      Object.entries(data).forEach(([linea,staz])=>{
+      Object.entries(data).forEach(([linea,giorni])=>{
         if(!merged[linea])merged[linea]={};
-        Object.assign(merged[linea],staz);
+        Object.entries(giorni).forEach(([giorno,staz])=>{
+          if(!merged[linea][giorno])merged[linea][giorno]={};
+          Object.assign(merged[linea][giorno],staz);
+        });
       });
     }
     pf.style.width='90%';
@@ -591,7 +607,6 @@ async function saveAll(){
     showToast('✅ Orari salvati su Firebase');
     adminFiles=[];renderFileList();
     loadMeta();
-    // Ricarica la visualizzazione
     closeOverlay();
     loadFromFirebase();
   }catch(ex){
@@ -609,7 +624,7 @@ async function clearDatabase(){
   loadFromFirebase();
 }
 
-/* ══ TOAST ══ */
+/* TOAST */
 function showToast(msg){
   const t=document.createElement('div');
   t.textContent=msg;
@@ -619,11 +634,9 @@ function showToast(msg){
   setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),300);},2800);
 }
 
-/* ══ PWA ══ */
+/* PWA */
 if('serviceWorker' in navigator&&!location.hostname.includes('claude')){
-  navigator.serviceWorker.register('./sw-treni.js')
-    .then(()=>console.log('SW registrato'))
-    .catch(e=>console.warn('SW:',e));
+  navigator.serviceWorker.register('./sw-treni.js').catch(e=>console.warn('SW:',e));
 }
 </script>
 </body>

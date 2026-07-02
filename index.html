@@ -476,6 +476,7 @@ function loadMeta(){
       document.getElementById('meta-info').innerHTML=
         `<strong>Ultimo aggiornamento:</strong> ${d.toLocaleString('it-IT')}<br>`+
         `<strong>Da:</strong> ${m.updatedBy||'—'}<br>`+
+        `<strong>Percorsi aggiornati:</strong> ${m.percorsiAggiornati||'—'}<br>`+
         `<strong>File:</strong> ${m.fileNames||'—'}`;
     }else{sec.style.display='none';}
   });
@@ -582,6 +583,7 @@ async function saveAll(){
   btn.disabled=true;btn.textContent='Elaborazione…';
   pb.style.display='';pf.style.width='0%';
   try{
+    // Parsa tutti i file e raggruppa per linea/giorno
     const merged={};
     for(let i=0;i<adminFiles.length;i++){
       pf.style.width=Math.round((i/adminFiles.length)*80)+'%';
@@ -595,16 +597,30 @@ async function saveAll(){
       });
     }
     pf.style.width='90%';
+
+    // Aggiorna SOLO i percorsi linea/giorno presenti nei file caricati
+    const updates={};
+    Object.entries(merged).forEach(([linea,giorni])=>{
+      Object.entries(giorni).forEach(([giorno,staz])=>{
+        updates[`${DB_PATH}/linee/${linea}/${giorno}`]=staz;
+      });
+    });
+    // Usa update() invece di set() → tocca solo i nodi indicati
+    await db.ref('/').update(updates);
+
+    // Aggiorna meta
     const mat=currentUser?.email?.replace('@turniapp.local','')||'admin';
-    await db.ref(DB_PATH+'/linee').set(merged);
+    const paths=Object.entries(merged).flatMap(([l,gs])=>Object.keys(gs).map(g=>`${l}/${g}`)).join(', ');
     await db.ref(DB_PATH+'/meta').set({
       lastUpdate:Date.now(),
       updatedBy:'Matricola '+mat,
-      fileNames:adminFiles.map(f=>f.name).join(', ')
+      fileNames:adminFiles.map(f=>f.name).join(', '),
+      percorsiAggiornati:paths
     });
+
     pf.style.width='100%';
     setTimeout(()=>{pb.style.display='none';},600);
-    showToast('✅ Orari salvati su Firebase');
+    showToast(`✅ Aggiornato: ${paths}`);
     adminFiles=[];renderFileList();
     loadMeta();
     closeOverlay();

@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#3C3489">
+<link rel="manifest" href="./manifest-treni.json">
+<link rel="apple-touch-icon" href="./icon-treni.svg">
+<title>Orari Treni</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#F4F3FB; --surface:#fff; --surface2:#F8F7FF;
+  --border:#E2DFFA; --border2:#CBC6F0;
+  --purple:#534AB7; --purple-dk:#3C3489; --purple-lt:#EEEDFE;
+  --text:#1A1735; --text2:#6B6891; --text3:#A09DC0;
+  --red:#D84040; --green:#2A9D5C;
+  --top-h:56px; --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column}
+
+/* ── TOPBAR ── */
+.topbar{height:var(--top-h);background:var(--purple-dk);display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex-shrink:0;z-index:50}
+.topbar-logo{font-size:18px;font-weight:800;color:white;letter-spacing:-.5px}
+.topbar-logo span{color:#AFA9EC}
+.icon-btn{width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;background:rgba(255,255,255,.12);color:white;transition:background .15s;position:relative}
+.icon-btn:active{background:rgba(255,255,255,.25)}
+.admin-badge{position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:#4ade80;border:1.5px solid var(--purple-dk)}
+
+/* ── SCROLL AREA ── */
+.scroll-area{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--safe-b)+16px)}
+
+/* ── LINEA TABS ── */
+.linea-bar{display:flex;gap:6px;padding:10px 16px 4px;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
+.linea-bar::-webkit-scrollbar{display:none}
+.linea-tab{flex-shrink:0;padding:8px 18px;border-radius:12px;font-size:13px;font-weight:700;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;transition:all .15s}
+.linea-tab.active{background:var(--purple-dk);color:white;border-color:var(--purple-dk)}
+
+/* ── STAZIONE CHIPS ── */
+.loc-scroll{display:flex;gap:8px;padding:6px 16px 2px;overflow-x:auto;scrollbar-width:none}
+.loc-scroll::-webkit-scrollbar{display:none}
+.loc-chip{flex-shrink:0;padding:7px 14px;border-radius:20px;font-size:13px;font-weight:600;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;transition:all .15s}
+.loc-chip.active{background:var(--purple);color:white;border-color:var(--purple)}
+
+/* ── SEARCH ── */
+.search-bar{margin:8px 16px;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px}
+.search-bar input{flex:1;border:none;outline:none;font-size:14px;background:none;color:var(--text)}
+.train-match{font-size:11px;color:var(--text2);padding:2px 16px 6px}
+
+/* ── TRAIN CARDS ── */
+.train-card{background:var(--surface);border-radius:16px;border:1px solid var(--border);margin:0 16px 10px;overflow:hidden;transition:box-shadow .15s}
+.train-card.expanded{box-shadow:0 4px 20px rgba(83,74,183,.12);border-color:var(--purple)}
+.train-card-header{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;-webkit-user-select:none;user-select:none}
+.train-card-header:active{background:var(--surface2)}
+.train-num{font-size:16px;font-weight:700;color:var(--text)}
+.train-arrow{font-size:14px;color:var(--text3);transition:transform .2s}
+.train-card.expanded .train-arrow{transform:rotate(90deg);color:var(--purple)}
+.train-detail{display:none;border-top:1px solid var(--border);padding:14px 16px}
+.train-card.expanded .train-detail{display:block}
+.time-cols{display:flex;gap:14px}
+.time-col{flex:1;min-width:0}
+.time-col-lbl{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;text-align:center}
+.time-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:6px}
+.time-item{background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center}
+.time-item-val{font-size:15px;font-weight:700;color:var(--purple-dk);font-variant-numeric:tabular-nums}
+mark{background:#FFF3CD;border-radius:2px;padding:0 1px}
+
+/* ── STATES ── */
+.empty-state{padding:48px 24px;text-align:center}
+.empty-icon{font-size:48px;margin-bottom:12px}
+.empty-title{font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px}
+.empty-sub{font-size:14px;color:var(--text2);line-height:1.5}
+.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:spin .8s linear infinite;margin:60px auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── OVERLAY ── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:none;align-items:flex-end;justify-content:center}
+.overlay.open{display:flex}
+
+/* ── MODAL ── */
+.modal{background:var(--surface);border-radius:24px 24px 0 0;width:100%;max-width:480px;padding:20px 20px calc(var(--safe-b)+20px);max-height:90vh;overflow-y:auto}
+.modal-handle{width:40px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 16px}
+.modal-title{font-size:18px;font-weight:800;color:var(--text);margin-bottom:4px}
+.modal-sub{font-size:13px;color:var(--text2);margin-bottom:20px}
+
+/* ── FORM ── */
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
+.field input{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:15px;background:var(--surface2);color:var(--text);outline:none;transition:border-color .15s}
+.field input:focus{border-color:var(--purple)}
+.field-hint{font-size:11px;color:var(--text3);margin-top:4px}
+.btn-primary{width:100%;padding:14px;border:none;border-radius:14px;background:var(--purple-dk);color:white;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .15s;margin-top:4px}
+.btn-primary:active{opacity:.85}
+.btn-primary:disabled{opacity:.5;cursor:default}
+.btn-secondary{width:100%;padding:12px;border:1.5px solid var(--border);border-radius:14px;background:none;color:var(--text2);font-size:14px;font-weight:600;cursor:pointer;margin-top:8px}
+.err-msg{color:var(--red);font-size:13px;margin-top:8px;text-align:center;min-height:18px}
+
+/* ── ADMIN PANEL ── */
+.upload-drop{border:2px dashed var(--border2);border-radius:16px;padding:28px 16px;text-align:center;cursor:pointer;transition:all .15s;margin-bottom:14px}
+.upload-drop.drag{background:var(--purple-lt);border-color:var(--purple)}
+.upload-drop:active{background:var(--purple-lt)}
+.file-list{margin-bottom:14px}
+.file-row{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);border-radius:12px;margin-bottom:6px;font-size:13px}
+.file-row-name{flex:1;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-row-del{background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:2px 4px}
+.meta-info{background:var(--surface2);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.6}
+.meta-info strong{color:var(--text)}
+.btn-danger{width:100%;padding:12px;border:1.5px solid #fecaca;border-radius:14px;background:none;color:var(--red);font-size:14px;font-weight:600;cursor:pointer;margin-top:8px}
+.progress-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:14px}
+.progress-fill{height:100%;background:var(--purple);border-radius:2px;transition:width .3s}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-logo">🚆 Orari<span> Treni</span></div>
+  <button class="icon-btn" id="admin-btn" onclick="openAdmin()" title="Pannello admin">🔒</button>
+</div>
+
+<!-- SCROLL AREA -->
+<div class="scroll-area" id="scroll-area">
+
+  <!-- Loading -->
+  <div id="state-loading"><div class="spinner"></div></div>
+
+  <!-- No data -->
+  <div id="state-empty" style="display:none">
+    <div class="empty-state">
+      <div class="empty-icon">🚆</div>
+      <div class="empty-title">Nessun orario disponibile</div>
+      <div class="empty-sub">Gli orari non sono ancora stati caricati.<br>Contatta l'amministratore.</div>
+    </div>
+  </div>
+
+  <!-- Main content -->
+  <div id="state-data" style="display:none">
+    <div class="linea-bar" id="linea-bar"></div>
+    <div class="loc-scroll" id="loc-scroll"></div>
+    <div class="search-bar">
+      <span>🔍</span>
+      <input type="search" id="train-search" placeholder="Cerca n° treno o orario…" oninput="renderTrains()">
+    </div>
+    <div class="train-match" id="train-match"></div>
+    <div id="train-cards"></div>
+  </div>
+
+</div>
+
+<!-- OVERLAY (login + admin panel) -->
+<div class="overlay" id="overlay" onclick="overlayClickOutside(event)">
+  <div class="modal" id="modal-content">
+
+    <!-- LOGIN VIEW -->
+    <div id="view-login">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Accesso Admin</div>
+      <div class="modal-sub">Inserisci le credenziali per gestire gli orari</div>
+      <div class="field">
+        <label>Matricola</label>
+        <input type="text" id="inp-matricola" placeholder="es. 69307" inputmode="numeric" maxlength="10">
+        <div class="field-hint">Verrà usata come matricola@turniapp.local</div>
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="inp-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <div class="err-msg" id="login-err"></div>
+      <button class="btn-primary" id="btn-login" onclick="doLogin()">Accedi</button>
+      <button class="btn-secondary" onclick="closeOverlay()">Annulla</button>
+    </div>
+
+    <!-- ADMIN PANEL VIEW -->
+    <div id="view-admin" style="display:none">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Gestione Orari</div>
+      <div class="modal-sub" id="admin-user-label"></div>
+
+      <div id="meta-section" style="display:none">
+        <div class="meta-info" id="meta-info"></div>
+      </div>
+
+      <div class="progress-bar" id="progress-bar" style="display:none">
+        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+      </div>
+
+      <div class="upload-drop" id="upload-drop"
+           onclick="document.getElementById('file-input-admin').click()"
+           ondragover="event.preventDefault();this.classList.add('drag')"
+           ondragleave="this.classList.remove('drag')"
+           ondrop="handleDrop(event)">
+        <div style="font-size:36px;margin-bottom:8px">📂</div>
+        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Carica file Excel</div>
+        <div style="font-size:12px;color:var(--text2)">Seleziona uno o più file · trascina qui</div>
+      </div>
+      <input type="file" id="file-input-admin" accept=".xlsx,.xls" multiple style="display:none" onchange="addFiles(event)">
+
+      <div class="file-list" id="file-list"></div>
+
+      <button class="btn-primary" id="btn-save" onclick="saveAll()" style="display:none">💾 Salva orari su Firebase</button>
+      <button class="btn-danger" id="btn-clear-db" onclick="clearDatabase()">🗑 Cancella tutti gli orari</button>
+      <button class="btn-secondary" onclick="doLogout()">Esci dall'account</button>
+    </div>
+
+  </div>
+</div>
+
+<script>
+/* ══ FIREBASE CONFIG ══ */
+const FB_CONFIG = {
+  apiKey:            "AIzaSyAC754JvbEpQSxG8VyZgcGEIVyBkI9OZp8",
+  authDomain:        "turni-treni.firebaseapp.com",
+  databaseURL:       "https://turni-treni-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:         "turni-treni",
+  storageBucket:     "turni-treni.firebasestorage.app",
+  messagingSenderId: "56990486159",
+  appId:             "1:56990486159:web:c11af07363648d2e836afa"
+};
+firebase.initializeApp(FB_CONFIG);
+const auth = firebase.auth();
+const db   = firebase.database();
+const DB_PATH = 'orari-treni';
+
+/* ══ STATO APP ══ */
+let treniData   = {};   // {M1:{RHO FIERA:{treni:[...]}, ...}, M2:{...}}
+let selLinea    = '';
+let selStazione = '';
+let expandedTR  = null;
+let adminFiles  = [];   // file selezionati dall'admin (non ancora salvati)
+let currentUser = null;
+
+/* ══ BOOT ══ */
+auth.onAuthStateChanged(user => {
+  currentUser = user;
+  updateAdminBtn();
+});
+
+loadFromFirebase();
+
+/* ══ FIREBASE LOAD ══ */
+function loadFromFirebase(){
+  showState('loading');
+  db.ref(DB_PATH+'/linee').once('value')
+    .then(snap => {
+      const val = snap.val();
+      if(!val || !Object.keys(val).length){ showState('empty'); return; }
+      treniData = val;
+      selLinea  = Object.keys(treniData).sort()[0];
+      selStazione = Object.keys(treniData[selLinea]||{}).sort()[0]||'';
+      showState('data');
+      buildLinee();
+      buildStazioni();
+      renderTrains();
+    })
+    .catch(()=>showState('empty'));
+}
+
+function showState(s){
+  document.getElementById('state-loading').style.display = s==='loading'?'':'none';
+  document.getElementById('state-empty').style.display   = s==='empty'  ?'':'none';
+  document.getElementById('state-data').style.display    = s==='data'   ?'':'none';
+}
+
+/* ══ RENDER LINEE ══ */
+function buildLinee(){
+  const linee = Object.keys(treniData).sort();
+  const bar = document.getElementById('linea-bar');
+  if(linee.length<=1){ bar.style.display='none'; return; }
+  bar.style.display='flex';
+  bar.innerHTML = linee.map(l=>{
+    const safe=l.replace(/'/g,"\\'");
+    return `<div class="linea-tab${l===selLinea?' active':''}" onclick="selectLinea('${safe}',this)">${l}</div>`;
+  }).join('');
+}
+
+function selectLinea(l, el){
+  selLinea=l; expandedTR=null;
+  document.querySelectorAll('.linea-tab').forEach(t=>t.classList.toggle('active',t===el));
+  selStazione = Object.keys(treniData[selLinea]||{}).sort()[0]||'';
+  buildStazioni(); renderTrains();
+  document.getElementById('train-search').value='';
+  document.getElementById('train-match').textContent='';
+}
+
+/* ══ RENDER STAZIONI ══ */
+function buildStazioni(){
+  const stazioni = Object.entries(treniData[selLinea]||{}).sort((a,b)=>a[0].localeCompare(b[0]));
+  document.getElementById('loc-scroll').innerHTML = stazioni.map(([key,val])=>{
+    const label=val.nome||key;
+    const safe=key.replace(/'/g,"\\'");
+    return `<div class="loc-chip${key===selStazione?' active':''}" onclick="selectStazione('${safe}',this)">${label}</div>`;
+  }).join('');
+}
+
+function selectStazione(s,el){
+  selStazione=s; expandedTR=null;
+  document.querySelectorAll('.loc-chip').forEach(c=>c.classList.toggle('active',c===el));
+  renderTrains();
+  document.getElementById('train-search').value='';
+  document.getElementById('train-match').textContent='';
+}
+
+/* ══ RENDER TRENI ══ */
+function oraToMin(ora){
+  const s=String(ora||'').trim();
+  const half=s.endsWith('½');
+  const p=s.replace('½','').split(':');
+  if(p.length<2)return 9999;
+  return parseInt(p[0])*60+parseInt(p[1])+(half?.5:0);
+}
+
+function renderTrains(){
+  const staz = (treniData[selLinea]||{})[selStazione];
+  if(!staz){ document.getElementById('train-cards').innerHTML=''; return; }
+  const q=(document.getElementById('train-search').value||'').toLowerCase().trim();
+  let treni=[...(staz.treni||[])];
+  if(q) treni=treni.filter(t=>
+    t.tabella.toLowerCase().includes(q)||
+    (t.corse||[]).some(c=>c.ora.toLowerCase().includes(q)||c.corsa.toLowerCase().includes(q))
+  );
+  document.getElementById('train-match').textContent = q?`${treni.length} risultati`:'';
+  function hl(s){if(!q||!s)return s||'';return String(s).replace(new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'),'<mark>$1</mark>');}
+  const container=document.getElementById('train-cards');
+  if(!treni.length){
+    container.innerHTML=`<div class="empty-state"><div class="empty-icon">🚆</div><div class="empty-title">Nessun treno trovato</div></div>`;
+    return;
+  }
+  container.innerHTML=treni.map(t=>{
+    const isExp=expandedTR===t.tabella;
+    const safe=t.tabella.replace(/'/g,"\\'");
+    const corse=t.corse||[];
+    const dispari=corse.filter(c=>parseInt(c.corsa)%2!==0).sort((a,b)=>parseInt(a.corsa)-parseInt(b.corsa));
+    const pari   =corse.filter(c=>parseInt(c.corsa)%2===0).sort((a,b)=>parseInt(a.corsa)-parseInt(b.corsa));
+    function grid(list){
+      if(!list.length)return `<div style="font-size:12px;color:var(--text3);padding:6px 0">—</div>`;
+      return `<div class="time-grid">`+list.map(c=>`
+        <div class="time-item">
+          <div class="time-item-val">${hl(c.ora)}</div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">C.${hl(c.corsa)}</div>
+        </div>`).join('')+`</div>`;
+    }
+    return `<div class="train-card${isExp?' expanded':''}">
+      <div class="train-card-header" onclick="toggleTrain('${safe}')">
+        <div class="train-num">TR ${hl(t.tabella)}</div>
+        <span class="train-arrow">›</span>
+      </div>
+      <div class="train-detail">
+        <div class="time-cols">
+          <div class="time-col"><div class="time-col-lbl">Dispari</div>${grid(dispari)}</div>
+          <div class="time-col"><div class="time-col-lbl">Pari</div>${grid(pari)}</div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function toggleTrain(tab){
+  expandedTR=(expandedTR===tab)?null:tab;
+  renderTrains();
+  setTimeout(()=>{const el=document.querySelector('.train-card.expanded');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},50);
+}
+
+/* ══ ADMIN: OVERLAY ══ */
+function updateAdminBtn(){
+  const btn=document.getElementById('admin-btn');
+  const badge=btn.querySelector('.admin-badge');
+  if(currentUser){
+    btn.textContent='👤'; btn.title='Pannello admin';
+    if(!badge){const b=document.createElement('div');b.className='admin-badge';btn.appendChild(b);}
+  } else {
+    btn.textContent='🔒'; btn.title='Accesso admin';
+    if(badge)badge.remove();
+  }
+}
+
+function openAdmin(){
+  if(currentUser){ showAdminPanel(); }
+  else { showLoginView(); }
+  document.getElementById('overlay').classList.add('open');
+}
+
+function closeOverlay(){
+  document.getElementById('overlay').classList.remove('open');
+  adminFiles=[];
+  renderFileList();
+}
+
+function overlayClickOutside(e){
+  if(e.target===document.getElementById('overlay'))closeOverlay();
+}
+
+/* ── LOGIN ── */
+function showLoginView(){
+  document.getElementById('view-login').style.display='';
+  document.getElementById('view-admin').style.display='none';
+  document.getElementById('login-err').textContent='';
+  document.getElementById('inp-matricola').value='';
+  document.getElementById('inp-password').value='';
+}
+
+function doLogin(){
+  const mat=document.getElementById('inp-matricola').value.trim();
+  const pwd=document.getElementById('inp-password').value;
+  const btn=document.getElementById('btn-login');
+  if(!mat||!pwd){document.getElementById('login-err').textContent='Compila tutti i campi';return;}
+  btn.disabled=true;btn.textContent='Accesso…';
+  const email=mat+'@turniapp.local';
+  auth.signInWithEmailAndPassword(email,pwd)
+    .then(()=>{ showAdminPanel(); })
+    .catch(e=>{
+      document.getElementById('login-err').textContent='Credenziali non valide';
+      btn.disabled=false;btn.textContent='Accedi';
+    });
+}
+
+function doLogout(){
+  auth.signOut().then(()=>{closeOverlay();});
+}
+
+/* ── ADMIN PANEL ── */
+function showAdminPanel(){
+  document.getElementById('view-login').style.display='none';
+  document.getElementById('view-admin').style.display='';
+  const mat=currentUser?.email?.replace('@turniapp.local','')||'';
+  document.getElementById('admin-user-label').textContent='Connesso come matricola '+mat;
+  loadMeta();
+}
+
+function loadMeta(){
+  db.ref(DB_PATH+'/meta').once('value').then(snap=>{
+    const m=snap.val();
+    const sec=document.getElementById('meta-section');
+    if(m){
+      sec.style.display='';
+      const d=new Date(m.lastUpdate);
+      document.getElementById('meta-info').innerHTML=
+        `<strong>Ultimo aggiornamento:</strong> ${d.toLocaleString('it-IT')}<br>`+
+        `<strong>Da:</strong> ${m.updatedBy||'—'}<br>`+
+        `<strong>File:</strong> ${m.fileNames||'—'}`;
+    } else { sec.style.display='none'; }
+  });
+}
+
+/* ── FILE SELECTION ── */
+function addFiles(evt){
+  const newFiles=[...evt.target.files];
+  newFiles.forEach(f=>{ if(!adminFiles.find(x=>x.name===f.name))adminFiles.push(f); });
+  renderFileList();
+  evt.target.value='';
+}
+
+function handleDrop(e){
+  e.preventDefault();
+  document.getElementById('upload-drop').classList.remove('drag');
+  const files=[...e.dataTransfer.files].filter(f=>f.name.endsWith('.xlsx')||f.name.endsWith('.xls'));
+  files.forEach(f=>{ if(!adminFiles.find(x=>x.name===f.name))adminFiles.push(f); });
+  renderFileList();
+}
+
+function removeFile(i){
+  adminFiles.splice(i,1);
+  renderFileList();
+}
+
+function renderFileList(){
+  const list=document.getElementById('file-list');
+  const btn=document.getElementById('btn-save');
+  list.innerHTML=adminFiles.map((f,i)=>`
+    <div class="file-row">
+      <span>📊</span>
+      <span class="file-row-name">${f.name}</span>
+      <button class="file-row-del" onclick="removeFile(${i})">✕</button>
+    </div>`).join('');
+  btn.style.display=adminFiles.length?'':'none';
+}
+
+/* ── PARSE & SAVE ── */
+// Firebase non accetta . # $ / [ ] nelle chiavi → li sostituiamo con _
+function toKey(s){ return s.replace(/[.#$\/\[\]]/g,'_'); }
+
+// Stazioni da includere per linea: match = sottostringa del nome foglio (case-insensitive)
+const STAZIONI_TARGET = {
+  M1: [
+    { match:'PAGANO',          label:'PAGANO'          },
+    { match:'SESTO 1° MAGGIO', label:'SESTO 1° MAGGIO' },
+    { match:'RHO FIERA',       label:'RHO FIERA'       },
+    { match:'BISCEGLIE',       label:'BISCEGLIE'       },
+  ],
+  M2: [
+    { match:'FAMAGOSTA',       label:'FAMAGOSTA'       },
+    { match:'CASCINA GOBBA',   label:'C.NA GOBBA'      },
+  ],
+  M3: [
+    { match:'COMASINA',        label:'COMASINA'        },
+    { match:'S. DONATO',       label:'S.DONATO'        },
+  ],
+};
+
+function matchStazione(linea, nomeStazione){
+  const targets = STAZIONI_TARGET[linea.toUpperCase()]||[];
+  const upper = nomeStazione.toUpperCase();
+  return targets.find(t => upper.includes(t.match.toUpperCase())) || null;
+}
+
+const COL_GROUPS=[[2,3,7],[9,10,14],[16,17,21],[23,24,28]];
+const DATI_ROW=11;
+
+function parseExcelFile(file){
+  return new Promise((resolve,reject)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      try{
+        const wb=XLSX.read(e.target.result,{type:'array',raw:false});
+        const result={};
+        wb.SheetNames.forEach(sh=>{
+          // Rileva linea: "PAGANO - M1" → linea=M1, stazione=PAGANO
+          const m=sh.match(/^(.*?)\s*-\s*(M\d+)\s*$/i);
+          if(!m)return;
+          const stazione=m[1].trim();
+          const linea=m[2].toUpperCase();
+          const ws=wb.Sheets[sh];
+          const raw=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
+          const passaggi=[];
+          for(let ri=DATI_ROW;ri<raw.length;ri++){
+            const row=raw[ri]||[];
+            COL_GROUPS.forEach(([ct,cc,co])=>{
+              const tab=String(row[ct]||'').trim();
+              const cor=String(row[cc]||'').trim();
+              const ora=String(row[co]||'').trim();
+              if(ora&&tab&&cor) passaggi.push({tabella:tab,corsa:cor,ora});
+            });
+          }
+          if(!passaggi.length)return;
+          // Raggruppa per tabella, ordina per numero tabella
+          const byTab={};
+          passaggi.forEach(p=>{
+            if(!byTab[p.tabella])byTab[p.tabella]={tabella:p.tabella,corse:[]};
+            byTab[p.tabella].corse.push({corsa:p.corsa,ora:p.ora});
+          });
+          const treni=Object.values(byTab).sort((a,b)=>parseInt(a.tabella)-parseInt(b.tabella));
+          // Filtra: solo stazioni nel whitelist
+          const match = matchStazione(linea, stazione);
+          if(!match) return;
+          const label = match.label;
+
+          if(!result[linea])result[linea]={};
+          result[linea][toKey(label)]={nome:label, treni};
+        });
+        resolve(result);
+      }catch(ex){reject(ex);}
+    };
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+async function saveAll(){
+  const btn=document.getElementById('btn-save');
+  const pb=document.getElementById('progress-bar');
+  const pf=document.getElementById('progress-fill');
+  btn.disabled=true;btn.textContent='Elaborazione…';
+  pb.style.display='';pf.style.width='0%';
+
+  try{
+    const merged={};
+    for(let i=0;i<adminFiles.length;i++){
+      pf.style.width=Math.round((i/adminFiles.length)*80)+'%';
+      const data=await parseExcelFile(adminFiles[i]);
+      Object.entries(data).forEach(([linea,staz])=>{
+        if(!merged[linea])merged[linea]={};
+        Object.assign(merged[linea],staz);
+      });
+    }
+    pf.style.width='90%';
+    const mat=currentUser?.email?.replace('@turniapp.local','')||'admin';
+    await db.ref(DB_PATH+'/linee').set(merged);
+    await db.ref(DB_PATH+'/meta').set({
+      lastUpdate:Date.now(),
+      updatedBy:'Matricola '+mat,
+      fileNames:adminFiles.map(f=>f.name).join(', ')
+    });
+    pf.style.width='100%';
+    setTimeout(()=>{pb.style.display='none';},600);
+    showToast('✅ Orari salvati su Firebase');
+    adminFiles=[];renderFileList();
+    loadMeta();
+    // Ricarica la visualizzazione
+    closeOverlay();
+    loadFromFirebase();
+  }catch(ex){
+    showToast('❌ '+ex.message);
+    pb.style.display='none';
+  }
+  btn.disabled=false;btn.textContent='💾 Salva orari su Firebase';
+}
+
+async function clearDatabase(){
+  if(!confirm('Cancellare tutti gli orari da Firebase?'))return;
+  await db.ref(DB_PATH).remove();
+  showToast('🗑 Orari cancellati');
+  closeOverlay();
+  loadFromFirebase();
+}
+
+/* ══ TOAST ══ */
+function showToast(msg){
+  const t=document.createElement('div');
+  t.textContent=msg;
+  t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#3C3489;color:white;padding:11px 20px;border-radius:20px;font-size:14px;font-weight:600;z-index:300;opacity:0;transition:opacity .25s;white-space:nowrap;max-width:90vw;text-align:center';
+  document.body.appendChild(t);
+  requestAnimationFrame(()=>t.style.opacity='1');
+  setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),300);},2800);
+}
+
+/* ══ PWA ══ */
+if('serviceWorker' in navigator&&!location.hostname.includes('claude')){
+  navigator.serviceWorker.register('./sw-treni.js')
+    .then(()=>console.log('SW registrato'))
+    .catch(e=>console.warn('SW:',e));
+}
+</script>
+</body>
+</html>

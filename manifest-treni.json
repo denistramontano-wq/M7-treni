@@ -1,0 +1,19 @@
+{
+  "name": "Orari Treni",
+  "short_name": "Treni",
+  "description": "Consultazione orari treni Linea M1, M2, M3",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F4F3FB",
+  "theme_color": "#3C3489",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "./icon-treni.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

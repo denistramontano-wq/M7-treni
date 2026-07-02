@@ -129,8 +129,10 @@ mark{background:#FFF3CD;border-radius:2px;padding:0 1px}
 
 <!-- TOPBAR -->
 <div class="topbar">
-  <div class="topbar-logo">🚆 Orari<span> Treni</span></div>
-  <button class="icon-btn" id="admin-btn" onclick="openAdmin()" title="Pannello admin">🔒</button>
+  <div class="topbar-logo" id="logo-tap">🚆 Orari<span> Treni</span></div>
+  <div id="admin-indicator" style="display:none">
+    <button class="icon-btn" onclick="openAdmin()" title="">👤<div class="admin-badge"></div></button>
+  </div>
 </div>
 
 <!-- SCROLL AREA -->
@@ -169,20 +171,15 @@ mark{background:#FFF3CD;border-radius:2px;padding:0 1px}
     <!-- LOGIN -->
     <div id="view-login">
       <div class="modal-handle"></div>
-      <div class="modal-title">Accesso Admin</div>
-      <div class="modal-sub">Inserisci le credenziali per gestire gli orari</div>
+      <div class="modal-title">Accesso</div>
       <div class="field">
-        <label>Matricola</label>
-        <input type="text" id="inp-matricola" placeholder="es. 69307" inputmode="numeric" maxlength="10">
-        <div class="field-hint">Verrà usata come matricola@turniapp.local</div>
+        <input type="text" id="inp-matricola" placeholder="ID" inputmode="numeric" maxlength="10" autocomplete="off">
       </div>
       <div class="field">
-        <label>Password</label>
-        <input type="password" id="inp-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+        <input type="password" id="inp-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" autocomplete="off">
       </div>
       <div class="err-msg" id="login-err"></div>
       <button class="btn-primary" id="btn-login" onclick="doLogin()">Accedi</button>
-      <button class="btn-secondary" onclick="closeOverlay()">Annulla</button>
     </div>
 
     <!-- ADMIN PANEL -->
@@ -432,15 +429,20 @@ function resetSearch(){
 }
 
 /* ══ ADMIN ══ */
+let _tapCount=0, _tapTimer=null;
+document.getElementById('logo-tap').addEventListener('click',()=>{
+  _tapCount++;
+  clearTimeout(_tapTimer);
+  _tapTimer=setTimeout(()=>{ _tapCount=0; },800);
+  if(_tapCount>=7){ _tapCount=0; openAdmin(); }
+});
+
 function updateAdminBtn(){
-  const btn=document.getElementById('admin-btn');
-  const badge=btn.querySelector('.admin-badge');
-  if(currentUser){
-    btn.textContent='👤';
-    if(!badge){const b=document.createElement('div');b.className='admin-badge';btn.appendChild(b);}
-  }else{
-    btn.textContent='🔒';
-    if(badge)badge.remove();
+  const ind=document.getElementById('admin-indicator');
+  if(currentUser&&!currentUser.isAnonymous){
+    ind.style.display='';
+  } else {
+    ind.style.display='none';
   }
 }
 

@@ -271,24 +271,34 @@ let currentUser = null;
 
 /* ══ BOOT ══ */
 auth.onAuthStateChanged(u => { currentUser=u; updateAdminBtn(); });
-loadFromFirebase();
 
-/* ══ FIREBASE LOAD ══ */
+// Carica dati: se non autenticato, accede in modo anonimo per leggere Firebase
 function loadFromFirebase(){
   showState('loading');
-  db.ref(DB_PATH+'/linee').once('value')
-    .then(snap => {
-      const val = snap.val();
-      if(!val||!Object.keys(val).length){ showState('empty'); return; }
-      treniData = val;
-      selLinea  = Object.keys(treniData).sort()[0];
-      selGiorno = firstGiorno(selLinea);
-      selStazione = firstStazione(selLinea, selGiorno);
-      showState('data');
-      buildLinee(); buildGiorni(); buildStazioni(); renderTrains();
-    })
-    .catch(()=>showState('empty'));
+  const doLoad = () => {
+    db.ref(DB_PATH+'/linee').once('value')
+      .then(snap => {
+        const val = snap.val();
+        if(!val||!Object.keys(val).length){ showState('empty'); return; }
+        treniData = val;
+        selLinea  = Object.keys(treniData).sort()[0];
+        selGiorno = firstGiorno(selLinea);
+        selStazione = firstStazione(selLinea, selGiorno);
+        showState('data');
+        buildLinee(); buildGiorni(); buildStazioni(); renderTrains();
+      })
+      .catch(()=>showState('empty'));
+  };
+  // Se non autenticato → login anonimo, poi carica
+  if(auth.currentUser){
+    doLoad();
+  } else {
+    auth.signInAnonymously()
+      .then(doLoad)
+      .catch(doLoad); // prova comunque anche se fallisce
+  }
 }
+loadFromFirebase();
 
 function firstGiorno(linea){
   const giorni = Object.keys(treniData[linea]||{});

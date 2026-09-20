@@ -2,11 +2,12 @@
 <html lang="it">
 <head>
 <meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://cdnjs.cloudflare.com 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src https://*.firebaseio.com https://*.googleapis.com https://firebaseinstallations.googleapis.com wss://*.firebaseio.com; img-src 'self' data:; font-src 'self'">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#3C3489">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#ffffff">
 <link rel="manifest" href="./manifest-treni.json">
 <link rel="apple-touch-icon" href="./icon-treni.svg">
 <title>Orari Treni</title>
@@ -14,658 +15,704 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
 <style>
 :root{
-  --bg:#F4F3FB;--surface:#fff;--surface2:#F8F7FF;
-  --border:#E2DFFA;--border2:#CBC6F0;
-  --purple:#534AB7;--purple-dk:#3C3489;--purple-lt:#EEEDFE;
-  --text:#1A1735;--text2:#6B6891;--text3:#A09DC0;
-  --red:#D84040;--green:#2A9D5C;
-  --top-h:56px;--safe-b:env(safe-area-inset-bottom,0px);
+  --bg:#F7F7F5;--surface:#fff;--surface2:#F5F5F3;
+  --border:#EBEBEB;--text:#1A1A1A;--text2:#777;--text3:#B0B0B0;
+  --shadow:0 1px 4px rgba(0,0,0,.07),0 0 0 .5px rgba(0,0,0,.06);
+  --r-card:16px;--r-pill:20px;
+  --m1:#E20714;--m1-lt:#FFF0F0;--m1-bd:#FFB8B8;--m1-tx:#A80000;
+  --m2:#007740;--m2-lt:#F0FFF5;--m2-bd:#A8D8B8;--m2-tx:#005C2E;
+  --m3:#D4A900;--m3-lt:#FFFBF0;--m3-bd:#FFE580;--m3-tx:#7A6000;
+  --safe-t:env(safe-area-inset-top,0px);--safe-b:env(safe-area-inset-bottom,0px);
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-html,body{height:100%;overflow:hidden}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column}
-
-/* TOPBAR */
-.topbar{height:var(--top-h);background:var(--purple-dk);display:flex;align-items:center;justify-content:space-between;padding:0 16px;flex-shrink:0;z-index:50}
-.topbar-logo{font-size:18px;font-weight:800;color:white;letter-spacing:-.5px}
-.topbar-logo span{color:#AFA9EC}
-.icon-btn{width:36px;height:36px;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;background:rgba(255,255,255,.12);color:white;transition:background .15s;position:relative}
-.icon-btn:active{background:rgba(255,255,255,.25)}
-.admin-badge{position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:#4ade80;border:1.5px solid var(--purple-dk)}
-
-/* NAV BARS */
-.nav-bar{display:flex;gap:6px;padding:10px 16px 4px;overflow-x:auto;scrollbar-width:none;flex-shrink:0}
-.nav-bar::-webkit-scrollbar{display:none}
-.nav-tab{flex-shrink:0;padding:8px 18px;border-radius:12px;font-size:13px;font-weight:700;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;transition:all .15s}
-.nav-tab.active{background:var(--purple-dk);color:white;border-color:var(--purple-dk)}
-/* Giorno tabs: colori distinti */
-.giorno-tab{flex-shrink:0;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:700;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;transition:all .15s}
-.giorno-tab.active.lv  {background:#3C3489;color:white;border-color:#3C3489}
-.giorno-tab.active.sab {background:#7B3FB5;color:white;border-color:#7B3FB5}
-.giorno-tab.active.fes {background:#B53F6B;color:white;border-color:#B53F6B}
-
-/* STAZIONE CHIPS */
-.loc-scroll{display:flex;gap:8px;padding:4px 16px 2px;overflow-x:auto;scrollbar-width:none}
-.loc-scroll::-webkit-scrollbar{display:none}
-.loc-chip{flex-shrink:0;padding:7px 14px;border-radius:20px;font-size:13px;font-weight:600;border:1.5px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;transition:all .15s}
-.loc-chip.active{background:var(--purple);color:white;border-color:var(--purple)}
-
-/* SEARCH */
-.search-bar{margin:8px 16px;display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px}
-.search-bar input{flex:1;border:none;outline:none;font-size:14px;background:none;color:var(--text)}
-.train-match{font-size:11px;color:var(--text2);padding:2px 16px 6px}
-
-/* SCROLL */
-.scroll-area{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--safe-b)+16px)}
-
-/* TRAIN CARDS */
-.train-card{background:var(--surface);border-radius:16px;border:1px solid var(--border);margin:0 16px 10px;overflow:hidden;transition:box-shadow .15s}
-.train-card.expanded{box-shadow:0 4px 20px rgba(83,74,183,.12);border-color:var(--purple)}
-.train-card-header{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;-webkit-user-select:none;user-select:none}
-.train-card-header:active{background:var(--surface2)}
-.train-num{font-size:16px;font-weight:700;color:var(--text)}
-.train-arrow{font-size:14px;color:var(--text3);transition:transform .2s}
-.train-card.expanded .train-arrow{transform:rotate(90deg);color:var(--purple)}
-.train-detail{display:none;border-top:1px solid var(--border);padding:14px 16px}
-.train-card.expanded .train-detail{display:block}
-.time-cols{display:flex;gap:14px}
+html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',sans-serif;background:var(--bg);color:var(--text)}
+.topbar{background:var(--surface);padding:calc(var(--safe-t)+10px) 16px 0;flex-shrink:0;border-bottom:.5px solid var(--border);position:relative;z-index:10}
+.topbar-row1{display:flex;align-items:center;justify-content:space-between;padding-bottom:10px}
+.app-title{font-size:20px;font-weight:700;letter-spacing:-.3px;-webkit-user-select:none;user-select:none;cursor:default}
+.admin-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;display:none}
+.line-row{display:flex;gap:6px;padding-bottom:10px}
+.line-pill{padding:7px 18px;border-radius:var(--r-pill);font-size:12px;font-weight:700;border:1.5px solid transparent;cursor:pointer;transition:all .18s;letter-spacing:.02em}
+.lp-m1{background:var(--m1-lt);color:var(--m1-tx);border-color:var(--m1-bd)} .lp-m1.active{background:var(--m1);color:#fff;border-color:var(--m1)}
+.lp-m2{background:var(--m2-lt);color:var(--m2-tx);border-color:var(--m2-bd)} .lp-m2.active{background:var(--m2);color:#fff;border-color:var(--m2)}
+.lp-m3{background:var(--m3-lt);color:var(--m3-tx);border-color:var(--m3-bd)} .lp-m3.active{background:var(--m3);color:var(--m3-tx);border-color:var(--m3)}
+.giorno-seg{display:flex;background:var(--surface2);border-radius:12px;padding:3px;gap:2px;margin-bottom:10px}
+.gseg{flex:1;padding:6px 0;border-radius:9px;font-size:12px;font-weight:600;text-align:center;color:var(--text2);cursor:pointer;transition:all .18s}
+.gseg.active{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.10),0 0 0 .5px rgba(0,0,0,.04)}
+.scroll-area{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--safe-b)+24px)}
+.staz-scroll{display:flex;gap:7px;padding:12px 16px 4px;overflow-x:auto;scrollbar-width:none}
+.staz-scroll::-webkit-scrollbar{display:none}
+.staz-chip{flex-shrink:0;padding:7px 14px;border-radius:var(--r-pill);font-size:11px;font-weight:700;cursor:pointer;transition:all .18s;background:var(--surface);color:var(--text2);border:1.5px solid var(--border)}
+.sc-m1{background:var(--m1-lt);color:var(--m1-tx);border-color:var(--m1-bd)}
+.sc-m2{background:var(--m2-lt);color:var(--m2-tx);border-color:var(--m2-bd)}
+.sc-m3{background:var(--m3-lt);color:var(--m3-tx);border-color:var(--m3-bd)}
+.search-wrap{padding:8px 16px 4px}
+.search-box{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 14px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.search-box input{flex:1;border:none;outline:none;font-size:14px;background:none;color:var(--text)}
+.search-box input::placeholder{color:var(--text3)}
+.s-icon{font-size:15px;color:var(--text3)}
+.s-clear{font-size:16px;color:var(--text3);cursor:pointer;padding:2px;display:none}
+.train-match{font-size:11px;color:var(--text3);padding:4px 16px 0}
+.cards-wrap{padding:8px 16px 0}
+.train-card{background:var(--surface);border-radius:var(--r-card);margin-bottom:8px;box-shadow:var(--shadow);overflow:hidden}
+.tc-header{padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;-webkit-user-select:none;user-select:none}
+.tc-header:active{background:var(--surface2)}
+.tc-num{font-size:15px;font-weight:700}
+.tc-arr{font-size:13px;color:var(--text3);transition:transform .22s}
+.train-card.expanded .tc-arr{transform:rotate(90deg)}
+.tc-body{display:none;border-top:.5px solid var(--border);padding:12px 16px}
+.train-card.expanded .tc-body{display:block}
+.time-cols{display:flex;gap:12px}
 .time-col{flex:1;min-width:0}
-.time-col-lbl{font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;text-align:center}
-.time-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(82px,1fr));gap:6px}
-.time-item{background:var(--surface2);border-radius:10px;padding:8px 10px;text-align:center}
-.time-item-val{font-size:15px;font-weight:700;color:var(--purple-dk);font-variant-numeric:tabular-nums}
-mark{background:#FFF3CD;border-radius:2px;padding:0 1px}
-
-/* STATES */
-.empty-state{padding:48px 24px;text-align:center}
-.empty-icon{font-size:48px;margin-bottom:12px}
-.empty-title{font-size:18px;font-weight:700;color:var(--text);margin-bottom:6px}
-.empty-sub{font-size:14px;color:var(--text2);line-height:1.5}
-.spinner{width:40px;height:40px;border:3px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:spin .8s linear infinite;margin:60px auto}
+.time-col-lbl{font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:7px;text-align:center}
+.time-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:5px}
+.time-item{border-radius:10px;padding:7px 6px;text-align:center;background:var(--surface)}
+.time-val{font-size:13px;font-weight:700;font-variant-numeric:tabular-nums}
+.time-c{font-size:9px;color:var(--text3);margin-top:2px}
+.ti-m1{border:1.5px solid var(--m1-bd)} .ti-m1 .time-val{color:var(--m1-tx)}
+.ti-m2{border:1.5px solid var(--m2-bd)} .ti-m2 .time-val{color:var(--m2-tx)}
+.ti-m3{border:1.5px solid var(--m3-bd)} .ti-m3 .time-val{color:var(--m3-tx)}
+mark{background:#FFF9C4;border-radius:2px;padding:0 1px}
+.state-box{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 24px;text-align:center;gap:12px}
+.state-icon{font-size:44px}
+.state-title{font-size:18px;font-weight:700}
+.state-sub{font-size:14px;color:var(--text2);line-height:1.5}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--text);border-radius:50%;animation:spin .7s linear infinite;margin:60px auto}
 @keyframes spin{to{transform:rotate(360deg)}}
-
-/* OVERLAY */
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:none;align-items:flex-end;justify-content:center}
+.app-footer{padding:20px 16px 4px;text-align:center;font-size:10px;color:var(--text3)}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:100;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(2px)}
 .overlay.open{display:flex}
-.modal{background:var(--surface);border-radius:24px 24px 0 0;width:100%;max-width:480px;padding:20px 20px calc(var(--safe-b)+20px);max-height:90vh;overflow-y:auto}
-.modal-handle{width:40px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 16px}
-.modal-title{font-size:18px;font-weight:800;color:var(--text);margin-bottom:4px}
-.modal-sub{font-size:13px;color:var(--text2);margin-bottom:20px}
-
-/* FORM */
+.sheet{background:var(--surface);border-radius:24px 24px 0 0;width:100%;max-width:480px;padding:20px 20px calc(var(--safe-b)+20px);max-height:88vh;overflow-y:auto}
+.sh-handle{width:36px;height:4px;background:var(--border);border-radius:2px;margin:0 auto 18px}
+.sh-title{font-size:18px;font-weight:700;margin-bottom:4px}
+.sh-sub{font-size:13px;color:var(--text2);margin-bottom:20px}
 .field{margin-bottom:14px}
-.field label{display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em}
-.field input{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:15px;background:var(--surface2);color:var(--text);outline:none;transition:border-color .15s}
-.field input:focus{border-color:var(--purple)}
-.field-hint{font-size:11px;color:var(--text3);margin-top:4px}
-.btn-primary{width:100%;padding:14px;border:none;border-radius:14px;background:var(--purple-dk);color:white;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .15s;margin-top:4px}
-.btn-primary:active{opacity:.85}
-.btn-primary:disabled{opacity:.5;cursor:default}
-.btn-secondary{width:100%;padding:12px;border:1.5px solid var(--border);border-radius:14px;background:none;color:var(--text2);font-size:14px;font-weight:600;cursor:pointer;margin-top:8px}
-.err-msg{color:var(--red);font-size:13px;margin-top:8px;text-align:center;min-height:18px}
-
-/* ADMIN */
-.upload-drop{border:2px dashed var(--border2);border-radius:16px;padding:28px 16px;text-align:center;cursor:pointer;transition:all .15s;margin-bottom:14px}
-.upload-drop.drag{background:var(--purple-lt);border-color:var(--purple)}
-.file-list{margin-bottom:14px}
-.file-row{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface2);border-radius:12px;margin-bottom:6px;font-size:13px}
-.file-row-name{flex:1;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.file-row-tag{padding:2px 8px;border-radius:8px;font-size:11px;font-weight:700;color:white}
-.tag-lv {background:#3C3489}
-.tag-sab{background:#7B3FB5}
-.tag-fes{background:#B53F6B}
-.tag-unk{background:var(--text3)}
-.file-row-del{background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:2px 4px;flex-shrink:0}
-.meta-info{background:var(--surface2);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.6}
-.meta-info strong{color:var(--text)}
-.btn-danger{width:100%;padding:12px;border:1.5px solid #fecaca;border-radius:14px;background:none;color:var(--red);font-size:14px;font-weight:600;cursor:pointer;margin-top:8px}
-.progress-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;margin-bottom:14px}
-.progress-fill{height:100%;background:var(--purple);border-radius:2px;transition:width .3s}
+.field input{width:100%;padding:13px 14px;border:1px solid var(--border);border-radius:12px;font-size:15px;background:var(--surface2);color:var(--text);outline:none;transition:border-color .15s;-webkit-appearance:none}
+.field input:focus{border-color:var(--text)}
+.btn-main{width:100%;padding:14px;border:none;border-radius:14px;background:var(--text);color:#fff;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px;transition:opacity .15s}
+.btn-main:active{opacity:.8} .btn-main:disabled{opacity:.4;cursor:default}
+.btn-ghost{width:100%;padding:12px;border:1px solid var(--border);border-radius:14px;background:none;color:var(--text2);font-size:14px;font-weight:500;cursor:pointer;margin-top:8px}
+.btn-danger{width:100%;padding:12px;border:1px solid #fecaca;border-radius:14px;background:none;color:#c00;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px}
+.err{color:#c00;font-size:13px;text-align:center;margin-top:8px;min-height:18px}
+.lock-msg{background:#FFF0F0;border:1px solid #fecaca;border-radius:10px;padding:10px 14px;font-size:12px;color:#c00;margin-bottom:12px;display:none}
+.drop-zone{border:2px dashed var(--border);border-radius:14px;padding:26px 16px;text-align:center;cursor:pointer;transition:all .15s;margin-bottom:14px;background:var(--surface2)}
+.drop-zone.drag{background:var(--m1-lt);border-color:var(--m1-bd)}
+.file-row{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--surface2);border-radius:12px;margin-bottom:6px}
+.file-name{flex:1;font-size:12px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-tag{padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700;color:#fff;flex-shrink:0}
+.tag-lv{background:var(--text)} .tag-sab{background:#6B3FA0} .tag-fes{background:#C0392B} .tag-unk{background:var(--text3)}
+.file-del{background:none;border:none;color:var(--text3);font-size:18px;cursor:pointer;padding:2px 4px;flex-shrink:0;line-height:1}
+.meta-box{background:var(--surface2);border-radius:12px;padding:12px 14px;font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.7}
+.meta-box b{color:var(--text)}
+.progress{height:3px;background:var(--border);border-radius:2px;margin-bottom:14px;overflow:hidden;display:none}
+.progress-fill{height:100%;background:var(--text);border-radius:2px;transition:width .3s}
+.toast{position:fixed;bottom:calc(var(--safe-b)+20px);left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:10px 20px;border-radius:20px;font-size:13px;font-weight:600;z-index:200;white-space:nowrap;max-width:90vw;text-align:center;pointer-events:none;opacity:0;transition:opacity .25s}
 </style>
 </head>
-<body>
+<body style="display:flex;flex-direction:column;height:100%">
 
-<!-- TOPBAR -->
 <div class="topbar">
-  <div class="topbar-logo" id="logo-tap">🚆 Orari<span> Treni</span></div>
-  <div id="admin-indicator" style="display:none">
-    <button class="icon-btn" onclick="openAdmin()" title="">👤<div class="admin-badge"></div></button>
+  <div class="topbar-row1">
+    <span class="app-title" id="logo-tap">Orari Treni</span>
+    <div class="admin-dot" id="admin-dot"></div>
   </div>
+  <div class="line-row" id="line-row"></div>
+  <div class="giorno-seg" id="giorno-seg"></div>
 </div>
 
-<!-- SCROLL AREA -->
-<div class="scroll-area" id="scroll-area">
+<div class="scroll-area">
   <div id="state-loading"><div class="spinner"></div></div>
-
   <div id="state-empty" style="display:none">
-    <div class="empty-state">
-      <div class="empty-icon">🚆</div>
-      <div class="empty-title">Nessun orario disponibile</div>
-      <div class="empty-sub">Gli orari non sono ancora stati caricati.<br>Contatta l'amministratore.</div>
+    <div class="state-box">
+      <div class="state-icon">🚆</div>
+      <div class="state-title">Nessun orario</div>
+      <div class="state-sub">Gli orari non sono ancora stati caricati.</div>
     </div>
   </div>
-
   <div id="state-data" style="display:none">
-    <!-- Linea tabs -->
-    <div class="nav-bar" id="linea-bar"></div>
-    <!-- Giorno tabs -->
-    <div class="nav-bar" id="giorno-bar" style="padding-top:2px;padding-bottom:2px"></div>
-    <!-- Stazione chips -->
-    <div class="loc-scroll" id="loc-scroll"></div>
-    <!-- Search -->
-    <div class="search-bar">
-      <span>🔍</span>
-      <input type="search" id="train-search" placeholder="Cerca n° treno o orario…" oninput="renderTrains()">
+    <div class="staz-scroll" id="staz-scroll"></div>
+    <div class="search-wrap">
+      <div class="search-box">
+        <span class="s-icon">⌕</span>
+        <input type="search" id="search-input" placeholder="Cerca treno o orario…" autocomplete="off">
+        <span class="s-clear" id="search-clear">✕</span>
+      </div>
     </div>
     <div class="train-match" id="train-match"></div>
-    <div id="train-cards"></div>
+    <div class="cards-wrap" id="train-cards"></div>
+    <div class="app-footer">v1.0 · Creato da Denis Tramontano</div>
   </div>
 </div>
 
-<!-- OVERLAY -->
-<div class="overlay" id="overlay" onclick="overlayClickOutside(event)">
-  <div class="modal" id="modal-content">
-
-    <!-- LOGIN -->
+<div class="overlay" id="overlay">
+  <div class="sheet" id="sheet-inner">
     <div id="view-login">
-      <div class="modal-handle"></div>
-      <div class="modal-title">Accesso</div>
-      <div class="field">
-        <input type="text" id="inp-matricola" placeholder="ID" inputmode="numeric" maxlength="10" autocomplete="off">
-      </div>
-      <div class="field">
-        <input type="password" id="inp-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()" autocomplete="off">
-      </div>
-      <div class="err-msg" id="login-err"></div>
-      <button class="btn-primary" id="btn-login" onclick="doLogin()">Accedi</button>
+      <div class="sh-handle"></div>
+      <div class="sh-title">Accesso</div>
+      <div class="lock-msg" id="lock-msg"></div>
+      <div class="field"><input type="text" id="inp-mat" placeholder="ID" inputmode="numeric" maxlength="10" autocomplete="off"></div>
+      <div class="field"><input type="password" id="inp-pwd" placeholder="••••••••" autocomplete="off"></div>
+      <div class="err" id="login-err"></div>
+      <button class="btn-main" id="btn-login">Accedi</button>
     </div>
-
-    <!-- ADMIN PANEL -->
     <div id="view-admin" style="display:none">
-      <div class="modal-handle"></div>
-      <div class="modal-title">Gestione Orari</div>
-      <div class="modal-sub" id="admin-user-label"></div>
-
-      <div id="meta-section" style="display:none">
-        <div class="meta-info" id="meta-info"></div>
+      <div class="sh-handle"></div>
+      <div class="sh-title">Gestione orari</div>
+      <div class="sh-sub" id="admin-sub"></div>
+      <div id="meta-wrap" style="display:none"><div class="meta-box" id="meta-box"></div></div>
+      <div class="progress" id="progress"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+      <div class="drop-zone" id="drop-zone">
+        <div style="font-size:32px;margin-bottom:8px">📂</div>
+        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px">Carica file Excel</div>
+        <div style="font-size:12px;color:var(--text2)">LV · Sabato · Festivo — tutte le linee</div>
       </div>
-
-      <div class="progress-bar" id="progress-bar" style="display:none">
-        <div class="progress-fill" id="progress-fill" style="width:0%"></div>
-      </div>
-
-      <div class="upload-drop" id="upload-drop"
-           onclick="document.getElementById('file-input-admin').click()"
-           ondragover="event.preventDefault();this.classList.add('drag')"
-           ondragleave="this.classList.remove('drag')"
-           ondrop="handleDrop(event)">
-        <div style="font-size:36px;margin-bottom:8px">📂</div>
-        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px">Carica file Excel</div>
-        <div style="font-size:12px;color:var(--text2)">LV · Sabato · Festivo — tutte le linee insieme</div>
-      </div>
-      <input type="file" id="file-input-admin" accept=".xlsx,.xls" multiple style="display:none" onchange="addFiles(event)">
-
-      <div class="file-list" id="file-list"></div>
-      <button class="btn-primary" id="btn-save" onclick="saveAll()" style="display:none">💾 Salva orari su Firebase</button>
-      <button class="btn-danger" onclick="clearDatabase()">🗑 Cancella tutti gli orari</button>
-      <button class="btn-secondary" onclick="doLogout()">Esci dall'account</button>
+      <input type="file" id="file-inp" accept=".xlsx,.xls" multiple style="display:none">
+      <div id="file-list"></div>
+      <button class="btn-main" id="btn-save" style="display:none">Salva su Firebase</button>
+      <button class="btn-danger" id="btn-clear-db">Cancella tutti gli orari</button>
+      <button class="btn-ghost" id="btn-logout">Esci</button>
     </div>
   </div>
 </div>
+
+<div class="toast" id="toast"></div>
 
 <script>
-/* ══ CONFIG ══ */
-const FB_CONFIG = {
-  apiKey:            "AIzaSyAC754JvbEpQSxG8VyZgcGEIVyBkI9OZp8",
-  authDomain:        "turni-treni.firebaseapp.com",
-  databaseURL:       "https://turni-treni-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId:         "turni-treni",
-  storageBucket:     "turni-treni.firebasestorage.app",
-  messagingSenderId: "56990486159",
-  appId:             "1:56990486159:web:c11af07363648d2e836afa"
+(function(){
+'use strict';
+
+const FB_CFG={
+  apiKey:"AIzaSyD9molPsiBGZT3c2BGFStYBGvtH3Du_Xz0",
+  authDomain:"orari-treni-m7.firebaseapp.com",
+  databaseURL:"https://orari-treni-m7-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"orari-treni-m7",
+  storageBucket:"orari-treni-m7.firebasestorage.app",
+  messagingSenderId:"401685314059",
+  appId:"1:401685314059:web:8c758f61b14b543896650e"
 };
-firebase.initializeApp(FB_CONFIG);
-const auth = firebase.auth();
-const db   = firebase.database();
-const DB_PATH = 'orari-treni';
+firebase.initializeApp(FB_CFG);
+const auth=firebase.auth(), db=firebase.database(), DB_ROOT='orari-treni';
 
-/* ══ COSTANTI ══ */
-const GIORNO_LABELS = { LV:'Lun-Ven', SAB:'Sabato', FES:'Festivo' };
-const GIORNO_ORDER  = ['LV','SAB','FES'];
-const GIORNO_CSS    = { LV:'lv', SAB:'sab', FES:'fes' };
-
-// Stazioni da includere per linea
-const STAZIONI_TARGET = {
-  M1:[
-    {match:'PAGANO',          label:'PAGANO'},
-    {match:'SESTO 1° MAGGIO', label:'SESTO 1° MAGGIO'},
-    {match:'RHO FIERA',       label:'RHO FIERA'},
-    {match:'BISCEGLIE',       label:'BISCEGLIE'},
-  ],
-  M2:[
-    {match:'FAMAGOSTA',       label:'FAMAGOSTA'},
-    {match:'CASCINA GOBBA',   label:'C.NA GOBBA'},
-  ],
-  M3:[
-    {match:'COMASINA',        label:'COMASINA'},
-    {match:'S. DONATO',       label:'S.DONATO'},
-  ],
+/* ── CONFIG ── */
+const GIORNO_LABELS={LV:'Lun-Ven',SAB:'Sabato',FES:'Festivo'};
+const GIORNO_ORDER=['LV','SAB','FES'];
+const LINE_CSS={M1:'m1',M2:'m2',M3:'m3'};
+const STAZIONI_TARGET={
+  M1:[{match:'PAGANO',label:'PAGANO'},{match:'SESTO 1° MAGGIO',label:'SESTO 1° MAGGIO'},{match:'RHO FIERA',label:'RHO FIERA'},{match:'BISCEGLIE',label:'BISCEGLIE'}],
+  M2:[{match:'FAMAGOSTA',label:'FAMAGOSTA'},{match:'CASCINA GOBBA',label:'C.NA GOBBA'}],
+  M3:[{match:'COMASINA',label:'COMASINA'},{match:'S. DONATO',label:'S.DONATO'}]
 };
+const COL_GROUPS=[[2,3,7],[9,10,14],[16,17,21],[23,24,28]];
+const DATI_ROW=11;
+const MAX_ATTEMPTS=5, LOCK_MS=10*60*1000;
 
-const COL_GROUPS = [[2,3,7],[9,10,14],[16,17,21],[23,24,28]];
-const DATI_ROW   = 11;
+/* ── STATO ── */
+let appData={}, selLinea='', selGiorno='', selStaz='', expandedTR=null;
+let adminFiles=[], currentUser=null;
 
-/* ══ STATO ══ */
-let treniData   = {};   // {M1:{LV:{PAGANO:{treni:[...]}}}}
-let selLinea    = '';
-let selGiorno   = '';
-let selStazione = '';
-let expandedTR  = null;
-let adminFiles  = [];
-let currentUser = null;
-
-/* ══ BOOT ══ */
-auth.onAuthStateChanged(u => { currentUser=u; updateAdminBtn(); });
-
-// Carica dati: se non autenticato, accede in modo anonimo per leggere Firebase
-function loadFromFirebase(){
-  showState('loading');
-  const doLoad = () => {
-    db.ref(DB_PATH+'/linee').once('value')
-      .then(snap => {
-        const val = snap.val();
-        if(!val||!Object.keys(val).length){ showState('empty'); return; }
-        treniData = val;
-        selLinea  = Object.keys(treniData).sort()[0];
-        selGiorno = firstGiorno(selLinea);
-        selStazione = firstStazione(selLinea, selGiorno);
-        showState('data');
-        buildLinee(); buildGiorni(); buildStazioni(); renderTrains();
-      })
-      .catch(()=>showState('empty'));
-  };
-  // Se non autenticato → login anonimo, poi carica
-  if(auth.currentUser){
-    doLoad();
-  } else {
-    auth.signInAnonymously()
-      .then(doLoad)
-      .catch(doLoad); // prova comunque anche se fallisce
-  }
+/* ── HELPERS: SANITIZE ── */
+function safe(s){
+  return DOMPurify.sanitize(String(s??''),{ALLOWED_TAGS:[],ALLOWED_ATTR:[]});
 }
-loadFromFirebase();
-
-function firstGiorno(linea){
-  const giorni = Object.keys(treniData[linea]||{});
-  return GIORNO_ORDER.find(g=>giorni.includes(g)) || giorni[0] || '';
+function safeHl(s,q){
+  if(!q||!s)return safe(s);
+  const esc=String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]||c));
+  const rq=q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  const hl=esc.replace(new RegExp('('+rq+')','gi'),'<mark>$1</mark>');
+  return DOMPurify.sanitize(hl,{ALLOWED_TAGS:['mark'],ALLOWED_ATTR:[]});
 }
-function firstStazione(linea, giorno){
-  return Object.keys((treniData[linea]||{})[giorno]||{}).sort()[0]||'';
+function setTxt(el,s){el.textContent=String(s??'');}
+function toKey(s){return s.replace(/[.#$\/\[\]]/g,'_');}
+
+/* ── TOAST ── */
+function toast(msg){
+  const t=document.getElementById('toast');
+  setTxt(t,String(msg));
+  t.style.opacity='1';
+  clearTimeout(t._t);
+  t._t=setTimeout(()=>t.style.opacity='0',2600);
 }
 
+/* ── STATE ── */
 function showState(s){
-  document.getElementById('state-loading').style.display = s==='loading'?'':'none';
-  document.getElementById('state-empty').style.display   = s==='empty'  ?'':'none';
-  document.getElementById('state-data').style.display    = s==='data'   ?'':'none';
-}
-
-/* ══ BUILD LINEE ══ */
-function buildLinee(){
-  const linee = Object.keys(treniData).sort();
-  const bar = document.getElementById('linea-bar');
-  bar.style.display = linee.length<=1 ? 'none' : 'flex';
-  bar.innerHTML = linee.map(l=>{
-    const s=l.replace(/'/g,"\\'");
-    return `<div class="nav-tab${l===selLinea?' active':''}" onclick="selectLinea('${s}',this)">${l}</div>`;
-  }).join('');
-}
-
-function selectLinea(l, el){
-  selLinea=l; expandedTR=null;
-  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.toggle('active',t===el));
-  selGiorno=firstGiorno(l);
-  selStazione=firstStazione(l,selGiorno);
-  buildGiorni(); buildStazioni(); renderTrains();
-  resetSearch();
-}
-
-/* ══ BUILD GIORNI ══ */
-function buildGiorni(){
-  const disponibili = Object.keys(treniData[selLinea]||{});
-  const giorni = GIORNO_ORDER.filter(g=>disponibili.includes(g));
-  const bar = document.getElementById('giorno-bar');
-  bar.style.display = giorni.length<=1 ? 'none' : 'flex';
-  bar.innerHTML = giorni.map(g=>{
-    const css=GIORNO_CSS[g]||'';
-    const s=g.replace(/'/g,"\\'");
-    return `<div class="giorno-tab${g===selGiorno?' active '+css:''}" onclick="selectGiorno('${s}',this,'${css}')">${GIORNO_LABELS[g]||g}</div>`;
-  }).join('');
-}
-
-function selectGiorno(g, el, css){
-  selGiorno=g; expandedTR=null;
-  document.querySelectorAll('.giorno-tab').forEach(t=>{
-    t.classList.remove('active','lv','sab','fes');
+  ['loading','empty','data'].forEach(x=>{
+    document.getElementById('state-'+x).style.display=x===s?'':'none';
   });
-  el.classList.add('active',css);
-  selStazione=firstStazione(selLinea,g);
-  buildStazioni(); renderTrains();
-  resetSearch();
 }
 
-/* ══ BUILD STAZIONI ══ */
-function buildStazioni(){
-  const entries=Object.entries((treniData[selLinea]||{})[selGiorno]||{}).sort((a,b)=>a[0].localeCompare(b[0]));
-  document.getElementById('loc-scroll').innerHTML=entries.map(([key,val])=>{
-    const label=val.nome||key;
-    const s=key.replace(/'/g,"\\'");
-    return `<div class="loc-chip${key===selStazione?' active':''}" onclick="selectStazione('${s}',this)">${label}</div>`;
-  }).join('');
+/* ── FIREBASE LOAD ── */
+function loadData(){
+  showState('loading');
+  const go=()=>db.ref(DB_ROOT+'/linee').once('value')
+    .then(snap=>{
+      const val=snap.val();
+      if(!val||!Object.keys(val).length){showState('empty');return;}
+      appData=val;
+      selLinea=Object.keys(appData).sort()[0];
+      selGiorno=firstGiorno(selLinea);
+      selStaz=firstStaz(selLinea,selGiorno);
+      showState('data');
+      buildLinee();buildGiorni();buildStaz();renderTrains();
+    }).catch(()=>showState('empty'));
+  auth.currentUser?go():auth.signInAnonymously().then(go).catch(go);
 }
 
-function selectStazione(s,el){
-  selStazione=s; expandedTR=null;
-  document.querySelectorAll('.loc-chip').forEach(c=>c.classList.toggle('active',c===el));
-  renderTrains(); resetSearch();
+function firstGiorno(l){
+  const gs=Object.keys(appData[l]||{});
+  return GIORNO_ORDER.find(g=>gs.includes(g))||gs[0]||'';
+}
+function firstStaz(l,g){
+  return Object.keys((appData[l]||{})[g]||{}).sort()[0]||'';
 }
 
-/* ══ RENDER TRENI ══ */
+/* ── BUILD LINEE ── */
+function buildLinee(){
+  const row=document.getElementById('line-row');
+  row.innerHTML='';
+  Object.keys(appData).sort().forEach(l=>{
+    const css=LINE_CSS[l]||'';
+    const btn=document.createElement('div');
+    btn.className='line-pill lp-'+css+(l===selLinea?' active':'');
+    btn.dataset.linea=l;
+    setTxt(btn,l);
+    row.appendChild(btn);
+  });
+}
+document.getElementById('line-row').addEventListener('click',e=>{
+  const l=e.target.dataset.linea;
+  if(!l||!appData[l])return;
+  selLinea=l;expandedTR=null;
+  document.querySelectorAll('.line-pill').forEach(p=>{
+    p.classList.toggle('active',p.dataset.linea===l);
+  });
+  selGiorno=firstGiorno(l);selStaz=firstStaz(l,selGiorno);
+  buildGiorni();buildStaz();renderTrains();clearSearch();
+});
+
+/* ── BUILD GIORNI ── */
+function buildGiorni(){
+  const seg=document.getElementById('giorno-seg');
+  seg.innerHTML='';
+  const avail=Object.keys(appData[selLinea]||{});
+  GIORNO_ORDER.filter(g=>avail.includes(g)).forEach(g=>{
+    const el=document.createElement('div');
+    el.className='gseg'+(g===selGiorno?' active':'');
+    el.dataset.giorno=g;
+    setTxt(el,GIORNO_LABELS[g]||g);
+    seg.appendChild(el);
+  });
+}
+document.getElementById('giorno-seg').addEventListener('click',e=>{
+  const g=e.target.dataset.giorno;
+  if(!g)return;
+  selGiorno=g;expandedTR=null;
+  document.querySelectorAll('.gseg').forEach(el=>el.classList.toggle('active',el.dataset.giorno===g));
+  selStaz=firstStaz(selLinea,g);buildStaz();renderTrains();clearSearch();
+});
+
+/* ── BUILD STAZIONI ── */
+function buildStaz(){
+  const scroll=document.getElementById('staz-scroll');
+  scroll.innerHTML='';
+  const css=LINE_CSS[selLinea]||'';
+  Object.entries((appData[selLinea]||{})[selGiorno]||{})
+    .sort((a,b)=>a[0].localeCompare(b[0]))
+    .forEach(([key,val])=>{
+      const chip=document.createElement('div');
+      chip.className='staz-chip'+(key===selStaz?' sc-'+css:'');
+      chip.dataset.key=key;
+      chip.dataset.css=css;
+      setTxt(chip,val.nome||key);
+      scroll.appendChild(chip);
+    });
+}
+document.getElementById('staz-scroll').addEventListener('click',e=>{
+  const chip=e.target.closest('.staz-chip');
+  if(!chip)return;
+  selStaz=chip.dataset.key;expandedTR=null;
+  const css=chip.dataset.css;
+  document.querySelectorAll('.staz-chip').forEach(c=>{
+    c.className='staz-chip'+(c.dataset.key===selStaz?' sc-'+css:'');
+  });
+  renderTrains();clearSearch();
+});
+
+/* ── RENDER TRENI ── */
 function renderTrains(){
-  const staz=((treniData[selLinea]||{})[selGiorno]||{})[selStazione];
+  const staz=((appData[selLinea]||{})[selGiorno]||{})[selStaz];
   if(!staz){document.getElementById('train-cards').innerHTML='';return;}
-  const q=(document.getElementById('train-search').value||'').toLowerCase().trim();
+  const q=(document.getElementById('search-input').value||'').toLowerCase().trim();
   let treni=[...(staz.treni||[])];
-  if(q) treni=treni.filter(t=>
-    t.tabella.toLowerCase().includes(q)||
-    (t.corse||[]).some(c=>c.ora.toLowerCase().includes(q)||c.corsa.toLowerCase().includes(q))
+  if(q)treni=treni.filter(t=>
+    String(t.tabella).toLowerCase().includes(q)||
+    (t.corse||[]).some(c=>String(c.ora).toLowerCase().includes(q)||String(c.corsa).toLowerCase().includes(q))
   );
-  document.getElementById('train-match').textContent=q?`${treni.length} risultati`:'';
-  function hl(s){if(!q||!s)return String(s||'');return String(s).replace(new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi'),'<mark>$1</mark>');}
-  const container=document.getElementById('train-cards');
+  document.getElementById('train-match').textContent=q?treni.length+' risultati':'';
+  const tc=LINE_CSS[selLinea]||'';
+  const wrap=document.getElementById('train-cards');
+  wrap.innerHTML='';
   if(!treni.length){
-    container.innerHTML=`<div class="empty-state"><div class="empty-icon">🚆</div><div class="empty-title">Nessun treno trovato</div></div>`;
-    return;
+    const empty=document.createElement('div');
+    empty.className='state-box';
+    empty.style.padding='40px 24px';
+    empty.innerHTML='<div class="state-icon" style="font-size:32px">🔍</div>';
+    const t=document.createElement('div');t.className='state-title';t.style.fontSize='16px';
+    setTxt(t,'Nessun risultato');empty.appendChild(t);
+    wrap.appendChild(empty);return;
   }
-  container.innerHTML=treni.map(t=>{
+  treni.forEach(t=>{
     const isExp=expandedTR===t.tabella;
-    const safe=t.tabella.replace(/'/g,"\\'");
+    const card=document.createElement('div');
+    card.className='train-card'+(isExp?' expanded':'');
+    card.dataset.tab=t.tabella;
+    const header=document.createElement('div');
+    header.className='tc-header';
+    const numEl=document.createElement('div');
+    numEl.className='tc-num';
+    numEl.innerHTML='TR '+safeHl(t.tabella,q);
+    const arr=document.createElement('span');
+    arr.className='tc-arr';arr.textContent='›';
+    header.appendChild(numEl);header.appendChild(arr);
+    card.appendChild(header);
+    const body=document.createElement('div');
+    body.className='tc-body';
     const corse=t.corse||[];
     const dispari=corse.filter(c=>parseInt(c.corsa)%2!==0).sort((a,b)=>parseInt(a.corsa)-parseInt(b.corsa));
-    const pari   =corse.filter(c=>parseInt(c.corsa)%2===0).sort((a,b)=>parseInt(a.corsa)-parseInt(b.corsa));
-    function grid(list){
-      if(!list.length)return `<div style="font-size:12px;color:var(--text3);padding:6px 0">—</div>`;
-      return `<div class="time-grid">`+list.map(c=>`
-        <div class="time-item">
-          <div class="time-item-val">${hl(c.ora)}</div>
-          <div style="font-size:11px;color:var(--text3);margin-top:2px">C.${hl(c.corsa)}</div>
-        </div>`).join('')+`</div>`;
-    }
-    return `<div class="train-card${isExp?' expanded':''}">
-      <div class="train-card-header" onclick="toggleTrain('${safe}')">
-        <div class="train-num">TR ${hl(t.tabella)}</div>
-        <span class="train-arrow">›</span>
-      </div>
-      <div class="train-detail">
-        <div class="time-cols">
-          <div class="time-col"><div class="time-col-lbl">Dispari</div>${grid(dispari)}</div>
-          <div class="time-col"><div class="time-col-lbl">Pari</div>${grid(pari)}</div>
-        </div>
-      </div>
-    </div>`;
-  }).join('');
+    const pari=corse.filter(c=>parseInt(c.corsa)%2===0).sort((a,b)=>parseInt(a.corsa)-parseInt(b.corsa));
+    const cols=document.createElement('div');cols.className='time-cols';
+    [['Dispari',dispari],['Pari',pari]].forEach(([lbl,list])=>{
+      const col=document.createElement('div');col.className='time-col';
+      const colLbl=document.createElement('div');colLbl.className='time-col-lbl';setTxt(colLbl,lbl);col.appendChild(colLbl);
+      const grid=document.createElement('div');grid.className='time-grid';
+      if(!list.length){
+        const dash=document.createElement('div');dash.style.cssText='font-size:12px;color:var(--text3);padding:4px';setTxt(dash,'—');grid.appendChild(dash);
+      } else {
+        list.forEach(c=>{
+          const item=document.createElement('div');item.className='time-item ti-'+tc;
+          const val=document.createElement('div');val.className='time-val';val.innerHTML=safeHl(c.ora,q);
+          const cn=document.createElement('div');cn.className='time-c';cn.innerHTML='C.'+safeHl(c.corsa,q);
+          item.appendChild(val);item.appendChild(cn);grid.appendChild(item);
+        });
+      }
+      col.appendChild(grid);cols.appendChild(col);
+    });
+    body.appendChild(cols);card.appendChild(body);wrap.appendChild(card);
+  });
 }
 
-function toggleTrain(tab){
+document.getElementById('train-cards').addEventListener('click',e=>{
+  const card=e.target.closest('.train-card');
+  if(!card||!e.target.closest('.tc-header'))return;
+  const tab=card.dataset.tab;
   expandedTR=(expandedTR===tab)?null:tab;
   renderTrains();
   setTimeout(()=>{const el=document.querySelector('.train-card.expanded');if(el)el.scrollIntoView({behavior:'smooth',block:'start'});},50);
-}
-
-function resetSearch(){
-  document.getElementById('train-search').value='';
-  document.getElementById('train-match').textContent='';
-}
-
-/* ══ ADMIN ══ */
-let _tapCount=0, _tapTimer=null;
-document.getElementById('logo-tap').addEventListener('click',()=>{
-  _tapCount++;
-  clearTimeout(_tapTimer);
-  _tapTimer=setTimeout(()=>{ _tapCount=0; },800);
-  if(_tapCount>=7){ _tapCount=0; openAdmin(); }
 });
 
-function updateAdminBtn(){
-  const ind=document.getElementById('admin-indicator');
-  if(currentUser&&!currentUser.isAnonymous){
-    ind.style.display='';
-  } else {
-    ind.style.display='none';
-  }
+/* ── SEARCH ── */
+const searchInput=document.getElementById('search-input');
+const searchClear=document.getElementById('search-clear');
+searchInput.addEventListener('input',()=>{
+  searchClear.style.display=searchInput.value?'':'none';
+  renderTrains();
+});
+function clearSearch(){
+  searchInput.value='';
+  searchClear.style.display='none';
+  document.getElementById('train-match').textContent='';
+  renderTrains();
 }
+searchClear.addEventListener('click',clearSearch);
 
-function openAdmin(){ currentUser?showAdminPanel():showLoginView(); document.getElementById('overlay').classList.add('open'); }
-function closeOverlay(){ document.getElementById('overlay').classList.remove('open'); adminFiles=[]; renderFileList(); }
-function overlayClickOutside(e){ if(e.target===document.getElementById('overlay'))closeOverlay(); }
+/* ── AUTH STATE ── */
+auth.onAuthStateChanged(u=>{
+  currentUser=u;
+  const dot=document.getElementById('admin-dot');
+  dot.style.display=(u&&!u.isAnonymous)?'block':'none';
+});
 
-/* LOGIN */
-function showLoginView(){
+/* ── ADMIN TAP (7x logo) ── */
+let _taps=0,_tTimer=null;
+document.getElementById('logo-tap').addEventListener('click',()=>{
+  _taps++;
+  clearTimeout(_tTimer);
+  _tTimer=setTimeout(()=>{_taps=0;},800);
+  if(_taps>=7){_taps=0;openAdmin();}
+});
+
+/* ── OVERLAY ── */
+function openAdmin(){
+  (currentUser&&!currentUser.isAnonymous)?showAdminPanel():showLogin();
+  document.getElementById('overlay').classList.add('open');
+}
+function closeOverlay(){
+  document.getElementById('overlay').classList.remove('open');
+  adminFiles=[];renderFileList();
+}
+document.getElementById('overlay').addEventListener('click',e=>{
+  if(e.target===document.getElementById('overlay'))closeOverlay();
+});
+
+/* ── LOGIN con rate limiting ── */
+function getAttempts(){try{return JSON.parse(localStorage.getItem('_la')||'{}');}catch{return {};}}
+function setAttempts(o){try{localStorage.setItem('_la',JSON.stringify(o));}catch{}}
+function isLocked(){
+  const a=getAttempts();
+  if(a.until&&Date.now()<a.until)return a.until;
+  return false;
+}
+function recordFail(){
+  const a=getAttempts();
+  a.count=(a.count||0)+1;
+  if(a.count>=MAX_ATTEMPTS){a.until=Date.now()+LOCK_MS;a.count=0;}
+  setAttempts(a);
+}
+function resetAttempts(){setAttempts({});}
+
+function showLogin(){
   document.getElementById('view-login').style.display='';
   document.getElementById('view-admin').style.display='none';
   document.getElementById('login-err').textContent='';
-  document.getElementById('inp-matricola').value='';
-  document.getElementById('inp-password').value='';
+  document.getElementById('inp-mat').value='';
+  document.getElementById('inp-pwd').value='';
+  checkLock();
 }
-function doLogin(){
-  const mat=document.getElementById('inp-matricola').value.trim();
-  const pwd=document.getElementById('inp-password').value;
+function checkLock(){
+  const until=isLocked();
+  const msg=document.getElementById('lock-msg');
   const btn=document.getElementById('btn-login');
-  if(!mat||!pwd){document.getElementById('login-err').textContent='Compila tutti i campi';return;}
-  btn.disabled=true;btn.textContent='Accesso…';
-  auth.signInWithEmailAndPassword(mat+'@turniapp.local',pwd)
-    .then(()=>showAdminPanel())
-    .catch(()=>{document.getElementById('login-err').textContent='Credenziali non valide';btn.disabled=false;btn.textContent='Accedi';});
+  if(until){
+    const mins=Math.ceil((until-Date.now())/60000);
+    setTxt(msg,'Troppi tentativi. Riprova tra '+mins+' min.');
+    msg.style.display='';
+    btn.disabled=true;
+    document.getElementById('inp-mat').disabled=true;
+    document.getElementById('inp-pwd').disabled=true;
+  } else {
+    msg.style.display='none';btn.disabled=false;
+    document.getElementById('inp-mat').disabled=false;
+    document.getElementById('inp-pwd').disabled=false;
+  }
 }
-function doLogout(){ auth.signOut().then(()=>closeOverlay()); }
+document.getElementById('btn-login').addEventListener('click',doLogin);
+document.getElementById('inp-pwd').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
 
-/* ADMIN PANEL */
+function doLogin(){
+  if(isLocked()){checkLock();return;}
+  const m=document.getElementById('inp-mat').value.trim();
+  const p=document.getElementById('inp-pwd').value;
+  const errEl=document.getElementById('login-err');
+  if(!m||!p){setTxt(errEl,'Compila i campi');return;}
+  if(!/^\d{4,10}$/.test(m)){setTxt(errEl,'ID non valido');return;}
+  const btn=document.getElementById('btn-login');
+  btn.disabled=true;setTxt(btn,'…');
+  auth.signInWithEmailAndPassword(m+'@turniapp.local',p)
+    .then(cred=>{
+      return db.ref('admins/'+cred.user.uid).once('value').then(snap=>{
+        if(!snap.val()){
+          auth.signOut();
+          recordFail();checkLock();
+          setTxt(errEl,'Accesso non autorizzato');
+          btn.disabled=false;setTxt(btn,'Accedi');
+        } else {
+          resetAttempts();
+          showAdminPanel();
+        }
+      });
+    })
+    .catch(()=>{
+      recordFail();checkLock();
+      setTxt(errEl,'Credenziali non valide');
+      btn.disabled=false;setTxt(btn,'Accedi');
+    });
+}
+
+document.getElementById('btn-logout').addEventListener('click',()=>{
+  auth.signOut().then(()=>{auth.signInAnonymously();closeOverlay();});
+});
+
 function showAdminPanel(){
   document.getElementById('view-login').style.display='none';
   document.getElementById('view-admin').style.display='';
-  const mat=currentUser?.email?.replace('@turniapp.local','')||'';
-  document.getElementById('admin-user-label').textContent='Connesso come matricola '+mat;
+  setTxt(document.getElementById('admin-sub'),'Sessione attiva');
   loadMeta();
 }
 function loadMeta(){
-  db.ref(DB_PATH+'/meta').once('value').then(snap=>{
-    const m=snap.val();
-    const sec=document.getElementById('meta-section');
+  db.ref(DB_ROOT+'/meta').once('value').then(s=>{
+    const m=s.val(),w=document.getElementById('meta-wrap');
     if(m){
-      sec.style.display='';
+      w.style.display='';
       const d=new Date(m.lastUpdate);
-      document.getElementById('meta-info').innerHTML=
-        `<strong>Ultimo aggiornamento:</strong> ${d.toLocaleString('it-IT')}<br>`+
-        `<strong>Da:</strong> ${m.updatedBy||'—'}<br>`+
-        `<strong>Percorsi aggiornati:</strong> ${m.percorsiAggiornati||'—'}<br>`+
-        `<strong>File:</strong> ${m.fileNames||'—'}`;
-    }else{sec.style.display='none';}
+      const box=document.getElementById('meta-box');
+      box.innerHTML='';
+      [['Aggiornato',d.toLocaleString('it-IT')],['Percorsi',m.percorsi||'—']].forEach(([k,v])=>{
+        const line=document.createElement('span');
+        const bold=document.createElement('b');setTxt(bold,k+': ');
+        line.appendChild(bold);
+        line.appendChild(document.createTextNode(String(v)));
+        line.appendChild(document.createElement('br'));
+        box.appendChild(line);
+      });
+    } else {w.style.display='none';}
   });
 }
 
-/* FILE SELECTION */
-function toKey(s){ return s.replace(/[.#$\/\[\]]/g,'_'); }
-
-function detectGiorno(filename){
-  const u=filename.toUpperCase();
-  if(/_LV[_.\s]|[_.\s]LV_|\bLV\b/.test(u)) return 'LV';
-  if(/SAB/.test(u)) return 'SAB';
-  if(/FES|DOM|FEST/.test(u)) return 'FES';
+/* ── FILE ── */
+function detectGiorno(n){
+  const u=n.toUpperCase();
+  if(/_LV[_.\s]|[_.\s]LV_|\bLV\b/.test(u))return 'LV';
+  if(/SAB/.test(u))return 'SAB';
+  if(/FES|DOM|FEST/.test(u))return 'FES';
   return null;
 }
-
-function matchStazione(linea, nomeStazione){
-  const targets=STAZIONI_TARGET[linea.toUpperCase()]||[];
-  const upper=nomeStazione.toUpperCase();
-  return targets.find(t=>upper.includes(t.match.toUpperCase()))||null;
+function matchStaz(linea,nome){
+  const t=STAZIONI_TARGET[linea.toUpperCase()]||[];
+  const u=nome.toUpperCase();
+  return t.find(x=>u.includes(x.match.toUpperCase()))||null;
 }
 
-function addFiles(evt){
-  [...evt.target.files].forEach(f=>{if(!adminFiles.find(x=>x.name===f.name))adminFiles.push(f);});
-  renderFileList(); evt.target.value='';
-}
-function handleDrop(e){
-  e.preventDefault();
-  document.getElementById('upload-drop').classList.remove('drag');
-  [...e.dataTransfer.files].filter(f=>f.name.match(/\.xlsx?$/i))
-    .forEach(f=>{if(!adminFiles.find(x=>x.name===f.name))adminFiles.push(f);});
-  renderFileList();
-}
-function removeFile(i){ adminFiles.splice(i,1); renderFileList(); }
+const dropZone=document.getElementById('drop-zone');
+dropZone.addEventListener('click',()=>document.getElementById('file-inp').click());
+dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('drag');});
+dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('drag'));
+dropZone.addEventListener('drop',e=>{
+  e.preventDefault();dropZone.classList.remove('drag');
+  [...(e.dataTransfer.files||[])].filter(f=>/\.xlsx?$/i.test(f.name)).forEach(addFile);
+});
+document.getElementById('file-inp').addEventListener('change',e=>{
+  [...(e.target.files||[])].forEach(addFile);
+  e.target.value='';
+});
+
+function addFile(f){if(!adminFiles.find(x=>x.name===f.name))adminFiles.push(f);renderFileList();}
+
+document.getElementById('file-list').addEventListener('click',e=>{
+  const btn=e.target.closest('.file-del');
+  if(btn){adminFiles.splice(parseInt(btn.dataset.idx),1);renderFileList();}
+});
+
 function renderFileList(){
-  const list=document.getElementById('file-list');
   document.getElementById('btn-save').style.display=adminFiles.length?'':'none';
-  list.innerHTML=adminFiles.map((f,i)=>{
+  const tagCss={LV:'tag-lv',SAB:'tag-sab',FES:'tag-fes'};
+  const list=document.getElementById('file-list');
+  list.innerHTML='';
+  adminFiles.forEach((f,i)=>{
     const g=detectGiorno(f.name);
-    const tagCss=g?'tag-'+g.toLowerCase():'tag-unk';
-    const tagLbl=g?(GIORNO_LABELS[g]||g):'?';
-    return `<div class="file-row">
-      <span>📊</span>
-      <span class="file-row-name">${f.name}</span>
-      <span class="file-row-tag ${tagCss}">${tagLbl}</span>
-      <button class="file-row-del" onclick="removeFile(${i})">✕</button>
-    </div>`;
-  }).join('');
+    const row=document.createElement('div');row.className='file-row';
+    const icon=document.createElement('span');setTxt(icon,'📊');
+    const name=document.createElement('span');name.className='file-name';setTxt(name,f.name);
+    const tag=document.createElement('span');
+    tag.className='file-tag '+(g?tagCss[g]||'tag-unk':'tag-unk');
+    setTxt(tag,g?(GIORNO_LABELS[g]||g):'?');
+    const del=document.createElement('button');
+    del.className='file-del';del.dataset.idx=i;setTxt(del,'✕');
+    row.appendChild(icon);row.appendChild(name);row.appendChild(tag);row.appendChild(del);
+    list.appendChild(row);
+  });
 }
 
-/* PARSE */
-function parseExcelFile(file){
-  return new Promise((resolve,reject)=>{
-    const giorno=detectGiorno(file.name);
-    if(!giorno){reject(new Error('Giorno non riconosciuto nel nome file: '+file.name));return;}
-    const reader=new FileReader();
-    reader.onload=e=>{
+function parseFile(file){
+  return new Promise((res,rej)=>{
+    const g=detectGiorno(file.name);
+    if(!g){rej(new Error('Giorno non riconosciuto: '+safe(file.name)));return;}
+    const r=new FileReader();
+    r.onload=e=>{
       try{
         const wb=XLSX.read(e.target.result,{type:'array',raw:false});
-        const result={};
+        const out={};
         wb.SheetNames.forEach(sh=>{
-          const m=sh.match(/^(.*?)\s*-\s*(M\d+)\s*$/i);
-          if(!m)return;
-          const stazione=m[1].trim();
-          const linea=m[2].toUpperCase();
-          const match=matchStazione(linea,stazione);
-          if(!match)return;
+          const m=sh.match(/^(.*?)\s*-\s*(M\d+)\s*$/i);if(!m)return;
+          const stazName=m[1].trim(), linea=m[2].toUpperCase();
+          const match=matchStaz(linea,stazName);if(!match)return;
           const label=match.label;
           const ws=wb.Sheets[sh];
           const raw=XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''});
-          const passaggi=[];
+          const pass=[];
           for(let ri=DATI_ROW;ri<raw.length;ri++){
             const row=raw[ri]||[];
             COL_GROUPS.forEach(([ct,cc,co])=>{
               const tab=String(row[ct]||'').trim();
               const cor=String(row[cc]||'').trim();
               const ora=String(row[co]||'').trim();
-              if(ora&&tab&&cor)passaggi.push({tabella:tab,corsa:cor,ora});
+              if(ora&&tab&&cor){
+                if(!/^\d+$/.test(tab)||!/^\d+$/.test(cor))return;
+                if(!/^\d{1,2}:\d{2}(½)?$/.test(ora))return;
+                pass.push({tabella:tab,corsa:cor,ora});
+              }
             });
           }
-          if(!passaggi.length)return;
+          if(!pass.length)return;
           const byTab={};
-          passaggi.forEach(p=>{
+          pass.forEach(p=>{
             if(!byTab[p.tabella])byTab[p.tabella]={tabella:p.tabella,corse:[]};
             byTab[p.tabella].corse.push({corsa:p.corsa,ora:p.ora});
           });
           const treni=Object.values(byTab).sort((a,b)=>parseInt(a.tabella)-parseInt(b.tabella));
-          if(!result[linea])result[linea]={};
-          if(!result[linea][giorno])result[linea][giorno]={};
-          result[linea][giorno][toKey(label)]={nome:label,treni};
+          if(!out[linea])out[linea]={};
+          if(!out[linea][g])out[linea][g]={};
+          out[linea][g][toKey(label)]={nome:label,treni};
         });
-        resolve(result);
-      }catch(ex){reject(ex);}
+        res(out);
+      }catch(ex){rej(ex);}
     };
-    reader.readAsArrayBuffer(file);
+    r.onerror=()=>rej(new Error('Errore lettura file'));
+    r.readAsArrayBuffer(file);
   });
 }
 
-/* SAVE */
+document.getElementById('btn-save').addEventListener('click',saveAll);
 async function saveAll(){
+  if(!currentUser||currentUser.isAnonymous){toast('Non autorizzato');return;}
+  const snap=await db.ref('admins/'+currentUser.uid).once('value');
+  if(!snap.val()){toast('Non autorizzato');return;}
   const btn=document.getElementById('btn-save');
-  const pb=document.getElementById('progress-bar');
-  const pf=document.getElementById('progress-fill');
-  btn.disabled=true;btn.textContent='Elaborazione…';
-  pb.style.display='';pf.style.width='0%';
+  const pb=document.getElementById('progress'),pf=document.getElementById('progress-fill');
+  btn.disabled=true;setTxt(btn,'Elaborazione…');pb.style.display='';pf.style.width='0%';
   try{
-    // Parsa tutti i file e raggruppa per linea/giorno
     const merged={};
     for(let i=0;i<adminFiles.length;i++){
-      pf.style.width=Math.round((i/adminFiles.length)*80)+'%';
-      const data=await parseExcelFile(adminFiles[i]);
-      Object.entries(data).forEach(([linea,giorni])=>{
-        if(!merged[linea])merged[linea]={};
-        Object.entries(giorni).forEach(([giorno,staz])=>{
-          if(!merged[linea][giorno])merged[linea][giorno]={};
-          Object.assign(merged[linea][giorno],staz);
-        });
+      pf.style.width=Math.round(i/adminFiles.length*80)+'%';
+      const d=await parseFile(adminFiles[i]);
+      Object.entries(d).forEach(([l,gs])=>{
+        if(!merged[l])merged[l]={};
+        Object.entries(gs).forEach(([g,st])=>{if(!merged[l][g])merged[l][g]={};Object.assign(merged[l][g],st);});
       });
     }
     pf.style.width='90%';
-
-    // Aggiorna SOLO i percorsi linea/giorno presenti nei file caricati
     const updates={};
-    Object.entries(merged).forEach(([linea,giorni])=>{
-      Object.entries(giorni).forEach(([giorno,staz])=>{
-        updates[`${DB_PATH}/linee/${linea}/${giorno}`]=staz;
-      });
-    });
-    // Usa update() invece di set() → tocca solo i nodi indicati
+    Object.entries(merged).forEach(([l,gs])=>Object.entries(gs).forEach(([g,st])=>{
+      updates[DB_ROOT+'/linee/'+l+'/'+g]=st;
+    }));
     await db.ref('/').update(updates);
-
-    // Aggiorna meta
-    const mat=currentUser?.email?.replace('@turniapp.local','')||'admin';
-    const paths=Object.entries(merged).flatMap(([l,gs])=>Object.keys(gs).map(g=>`${l}/${g}`)).join(', ');
-    await db.ref(DB_PATH+'/meta').set({
-      lastUpdate:Date.now(),
-      updatedBy:'Matricola '+mat,
-      fileNames:adminFiles.map(f=>f.name).join(', '),
-      percorsiAggiornati:paths
-    });
-
-    pf.style.width='100%';
-    setTimeout(()=>{pb.style.display='none';},600);
-    showToast(`✅ Aggiornato: ${paths}`);
-    adminFiles=[];renderFileList();
-    loadMeta();
-    closeOverlay();
-    loadFromFirebase();
-  }catch(ex){
-    showToast('❌ '+ex.message);
-    pb.style.display='none';
-  }
-  btn.disabled=false;btn.textContent='💾 Salva orari su Firebase';
+    const percorsi=Object.entries(merged).flatMap(([l,gs])=>Object.keys(gs).map(g=>l+'/'+g)).join(', ');
+    await db.ref(DB_ROOT+'/meta').set({lastUpdate:Date.now(),percorsi,fileCount:adminFiles.length});
+    await db.ref(DB_ROOT+'/log').push({ts:Date.now(),op:'upload',percorsi});
+    pf.style.width='100%';setTimeout(()=>pb.style.display='none',500);
+    toast('Orari salvati · '+percorsi);
+    adminFiles=[];renderFileList();loadMeta();closeOverlay();loadData();
+  }catch(ex){toast('Errore: '+safe(ex.message));pb.style.display='none';}
+  btn.disabled=false;setTxt(btn,'Salva su Firebase');
 }
 
-async function clearDatabase(){
-  if(!confirm('Cancellare tutti gli orari da Firebase?'))return;
-  await db.ref(DB_PATH).remove();
-  showToast('🗑 Orari cancellati');
-  closeOverlay();
-  loadFromFirebase();
-}
+document.getElementById('btn-clear-db').addEventListener('click',async()=>{
+  if(!currentUser||currentUser.isAnonymous){toast('Non autorizzato');return;}
+  const snap=await db.ref('admins/'+currentUser.uid).once('value');
+  if(!snap.val()){toast('Non autorizzato');return;}
+  if(!confirm('Cancellare tutti gli orari?'))return;
+  await db.ref(DB_ROOT+'/linee').remove();
+  await db.ref(DB_ROOT+'/log').push({ts:Date.now(),op:'clear_all'});
+  toast('Orari cancellati');closeOverlay();loadData();
+});
 
-/* TOAST */
-function showToast(msg){
-  const t=document.createElement('div');
-  t.textContent=msg;
-  t.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#3C3489;color:white;padding:11px 20px;border-radius:20px;font-size:14px;font-weight:600;z-index:300;opacity:0;transition:opacity .25s;white-space:nowrap;max-width:90vw;text-align:center';
-  document.body.appendChild(t);
-  requestAnimationFrame(()=>t.style.opacity='1');
-  setTimeout(()=>{t.style.opacity='0';setTimeout(()=>t.remove(),300);},2800);
-}
-
-/* PWA */
+/* ── PWA ── */
 if('serviceWorker' in navigator&&!location.hostname.includes('claude')){
-  navigator.serviceWorker.register('./sw-treni.js').catch(e=>console.warn('SW:',e));
+  navigator.serviceWorker.register('./sw-treni.js').catch(()=>{});
 }
+
+loadData();
+})();
 </script>
 </body>
 </html>

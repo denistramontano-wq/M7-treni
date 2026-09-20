@@ -1,4 +1,4 @@
-const CACHE_NAME = 'orari-treni-v3';
+const CACHE_NAME = 'orari-treni-v5';
 const ASSETS = [
   './index.html',
   './manifest-treni.json',

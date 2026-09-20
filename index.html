@@ -243,21 +243,39 @@ function showState(s){
 }
 
 /* ── FIREBASE LOAD ── */
+let _loadPending=false;
 function loadData(){
+  if(_loadPending)return;
+  _loadPending=true;
   showState('loading');
+  let settled=false;
+  const finish=(state)=>{
+    if(settled)return;
+    settled=true;
+    _loadPending=false;
+    showState(state);
+  };
   const go=()=>db.ref(DB_ROOT+'/linee').once('value')
     .then(snap=>{
       const val=snap.val();
-      if(!val||!Object.keys(val).length){showState('empty');return;}
+      if(!val||!Object.keys(val).length){finish('empty');return;}
       appData=val;
       selLinea=Object.keys(appData).sort()[0];
       selGiorno=firstGiorno(selLinea);
       selStaz=firstStaz(selLinea,selGiorno);
-      showState('data');
+      finish('data');
       buildLinee();buildGiorni();buildStaz();renderTrains();
-    }).catch(()=>showState('empty'));
+    }).catch(()=>finish('empty'));
   auth.currentUser?go():auth.signInAnonymously().then(go).catch(go);
+  setTimeout(()=>{if(!settled)finish('empty');},10000);
 }
+
+/* ── RIPRENDI AL RIENTRO IN FOREGROUND ── */
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&document.getElementById('state-loading').style.display!=='none'){
+    loadData();
+  }
+});
 
 function firstGiorno(l){
   const gs=Object.keys(appData[l]||{});

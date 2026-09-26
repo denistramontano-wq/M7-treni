@@ -244,7 +244,9 @@ function showState(s){
 
 /* ── FIREBASE LOAD ── */
 let _loadPending=false;
-function loadData(){
+const MAX_LOAD_RETRIES=3;
+function loadData(retryCount){
+  retryCount=retryCount||0;
   if(_loadPending)return;
   _loadPending=true;
   showState('loading');
@@ -265,9 +267,19 @@ function loadData(){
       selStaz=firstStaz(selLinea,selGiorno);
       finish('data');
       buildLinee();buildGiorni();buildStaz();renderTrains();
-    }).catch(()=>finish('empty'));
+    }).catch(()=>{
+      if(settled)return;
+      settled=true;
+      _loadPending=false;
+      if(retryCount<MAX_LOAD_RETRIES)loadData(retryCount+1);else showState('empty');
+    });
   auth.currentUser?go():auth.signInAnonymously().then(go).catch(go);
-  setTimeout(()=>{if(!settled)finish('empty');},10000);
+  setTimeout(()=>{
+    if(settled)return;
+    settled=true;
+    _loadPending=false;
+    if(retryCount<MAX_LOAD_RETRIES)loadData(retryCount+1);else showState('empty');
+  },8000);
 }
 
 /* ── RIPRENDI AL RIENTRO IN FOREGROUND ── */

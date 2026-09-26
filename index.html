@@ -242,7 +242,23 @@ function showState(s){
   });
 }
 
-/* ── FIREBASE LOAD ── */
+/* ── FIREBASE LOAD (REST, no WebSocket) ── */
+function fetchLinee(){
+  return Promise.resolve(auth.currentUser?auth.currentUser.getIdToken():null)
+    .then(token=>{
+      const url=FB_CFG.databaseURL+'/'+DB_ROOT+'/linee.json'+(token?('?auth='+token):'');
+      const ctrl=new AbortController();
+      const tId=setTimeout(()=>ctrl.abort(),8000);
+      return fetch(url,{signal:ctrl.signal})
+        .then(res=>{
+          clearTimeout(tId);
+          if(!res.ok)throw new Error('HTTP '+res.status);
+          return res.json();
+        })
+        .catch(ex=>{clearTimeout(tId);throw ex;});
+    });
+}
+
 let _loadPending=false;
 const MAX_LOAD_RETRIES=3;
 function loadData(retryCount){
@@ -250,36 +266,22 @@ function loadData(retryCount){
   if(_loadPending)return;
   _loadPending=true;
   showState('loading');
-  let settled=false;
-  const finish=(state)=>{
-    if(settled)return;
-    settled=true;
-    _loadPending=false;
-    showState(state);
-  };
-  const go=()=>db.ref(DB_ROOT+'/linee').once('value')
-    .then(snap=>{
-      const val=snap.val();
-      if(!val||!Object.keys(val).length){finish('empty');return;}
+  const go=()=>fetchLinee()
+    .then(val=>{
+      _loadPending=false;
+      if(!val||!Object.keys(val).length){showState('empty');return;}
       appData=val;
       selLinea=Object.keys(appData).sort()[0];
       selGiorno=firstGiorno(selLinea);
       selStaz=firstStaz(selLinea,selGiorno);
-      finish('data');
+      showState('data');
       buildLinee();buildGiorni();buildStaz();renderTrains();
-    }).catch(()=>{
-      if(settled)return;
-      settled=true;
+    })
+    .catch(()=>{
       _loadPending=false;
       if(retryCount<MAX_LOAD_RETRIES)loadData(retryCount+1);else showState('empty');
     });
   auth.currentUser?go():auth.signInAnonymously().then(go).catch(go);
-  setTimeout(()=>{
-    if(settled)return;
-    settled=true;
-    _loadPending=false;
-    if(retryCount<MAX_LOAD_RETRIES)loadData(retryCount+1);else showState('empty');
-  },8000);
 }
 
 /* ── RIPRENDI AL RIENTRO IN FOREGROUND ── */

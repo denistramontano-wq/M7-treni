@@ -142,7 +142,7 @@ mark{background:#FFF9C4;border-radius:2px;padding:0 1px}
     </div>
     <div class="train-match" id="train-match"></div>
     <div class="cards-wrap" id="train-cards"></div>
-    <div class="app-footer">v1.0 · Creato da Denis Tramontano</div>
+    <div class="app-footer">v1.1 · Creato da Denis Tramontano</div>
   </div>
 </div>
 
@@ -657,6 +657,7 @@ function parseFile(file){
         wb.SheetNames.forEach(sh=>{
           const m=sh.match(/^(.*?)\s*-\s*(M\d+)\s*$/i);if(!m)return;
           const stazName=m[1].trim(), linea=m[2].toUpperCase();
+          if(/\bDEP\.?\b/i.test(stazName))return;
           const match=matchStaz(linea,stazName);if(!match)return;
           const label=match.label;
           const ws=wb.Sheets[sh];
